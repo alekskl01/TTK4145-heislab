@@ -21,7 +21,7 @@ const (
 
 type elevator struct {
 	ELEVATOR_STATE State
-	FLOOR          int
+	int 			FLOOR          
 	DIRECTION      Motor_Direction // vet ikke om denne kan funke :P
 }
 
