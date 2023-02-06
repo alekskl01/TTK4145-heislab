@@ -10,7 +10,7 @@ import (
 const NUM_FLOORS int = 4
 const ADDR string = "localhost:15657"
 
-var _numFloors int = NUM_FLOORS
+var NumFloors int = NUM_FLOORS
 var _addr string = ADDR
 
 const _pollRate = 20 * time.Millisecond
@@ -53,8 +53,8 @@ func Init(addr string, numFloors int) {
 	if addr == "" {
 		_addr = addr
 	}
-	if num == 0 {
-		_numFloors = numFloors
+	if numFloors == 0 {
+		NumFloors = numFloors
 	}
 	_mtx = sync.Mutex{}
 	var err error
@@ -86,10 +86,10 @@ func SetStopLamp(value bool) {
 }
 
 func PollButtons(receiver chan<- ButtonEvent) {
-	prev := make([][3]bool, _numFloors)
+	prev := make([][3]bool, NumFloors)
 	for {
 		time.Sleep(_pollRate)
-		for f := 0; f < _numFloors; f++ {
+		for f := 0; f < NumFloors; f++ {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
