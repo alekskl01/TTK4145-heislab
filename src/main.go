@@ -1,10 +1,10 @@
 package main
 
-import "driver"
+import "./elevio"
 
 func main() {
-
-	driver.Init("localhost:15657", numFloors)
+	
+	elevio.Init("localhost:15657", numFloors)
 
 	var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)
