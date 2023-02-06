@@ -8,7 +8,7 @@ import (
 const NUM_BUTTONS int = 3
 
 func requestAbove(elev elevatorfsm.Elevator) bool {
-	for floor := elev.Floor + 1; floor < elevio.NumFloors; floor++ {
+	for floor := elev.Floor + 1; floor < elevio.NUM_FLOORS; floor++ {
 		for button := 0; button < NUM_BUTTONS; button++ {
 			if elev.Requests[floor][button] == 1 {
 				return true

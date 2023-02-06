@@ -10,7 +10,6 @@ import (
 const NUM_FLOORS int = 4
 const ADDR string = "localhost:15657"
 
-var NumFloors int = NUM_FLOORS
 var _addr string = ADDR
 
 const _pollRate = 20 * time.Millisecond
@@ -42,19 +41,16 @@ type ButtonEvent struct {
 
 // Initialize with default settings.
 func DefaultInit() {
-	Init("", 0)
+	Init("")
 }
 
-func Init(addr string, numFloors int) {
+func Init(addr string) {
 	if _initialized {
 		fmt.Println("Driver already initialized!")
 		return
 	}
 	if addr == "" {
 		_addr = addr
-	}
-	if numFloors == 0 {
-		NumFloors = numFloors
 	}
 	_mtx = sync.Mutex{}
 	var err error
@@ -86,10 +82,10 @@ func SetStopLamp(value bool) {
 }
 
 func PollButtons(receiver chan<- ButtonEvent) {
-	prev := make([][3]bool, NumFloors)
+	prev := make([][3]bool, NUM_FLOORS)
 	for {
 		time.Sleep(_pollRate)
-		for f := 0; f < NumFloors; f++ {
+		for f := 0; f < NUM_FLOORS; f++ {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v != false {
