@@ -1,7 +1,7 @@
-include(
-	"driver"
-	"fmt"
-)
+package elevatorfsm
+
+import "Elevator/elevio"
+import "fmt"
 
 func elevator_setReady() 	//	INITIAL ELEVATOR STATE
 func getOrder()				//	CONTINUALLY CHECKS BUTTONS, STORES ORDERS

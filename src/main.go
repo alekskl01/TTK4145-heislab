@@ -1,6 +1,8 @@
 package main
 
 import "Elevator/elevio"
+import "Elevator/elevator_fsm"
+import "Elevator/requests"
 
 func main() {
 
