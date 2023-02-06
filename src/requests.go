@@ -39,8 +39,48 @@ func chooseDirection(elev Elevator) elevio.MotorDirection {
 	}
 	case MD_Down:
 		if requestBelow(elev) {
-			return elevio.
+			return elevio.MD_Down
 		}
-
-
+		else if requestAbove(elev) {
+			return elevio.MD_Up
+		}
+		else {
+			return MD_Stop
+		}
+	case default:
+		return MD_Stop
 }
+
+func shouldStop(elev Elevator) bool {
+	var floor int = elev.floor
+
+	switch elev.direction {
+	case MD_Up:
+		return elev.requests[floor][elevio.BT_HallUp] ||
+			elev.requests[floor][elevio.BT_Cab] ||
+			!requestAbove(elev) 
+
+	case MD_Down:
+		return elev.requests[floor][elevio.BT_HallDown] ||
+			elev.requests[floor][elevio.BT_Cab] ||
+			!requestBelow(elev)
+
+	case default:
+		return true
+	}
+}
+
+func clearRequestsAtFloor(elev) {
+	for button := 0; button < NUM_BUTTONS {
+		elev.requests[elev.foor][button] = 0;
+	} 
+}
+
+func clearAllRequests(elev) {
+	for floor := 0; floor < NUM_FLOORS; floor++ {
+		for button := 0; button < NUM_BUTTONS; button++ {
+			elev.requests[elev.foor][button] = 0;
+		}
+	} 
+}
+
