@@ -1,10 +1,12 @@
 package main
 
 import "Elevator/elevio"
+import "Elevator/elevator_fsm"
+import "Elevator/requests"
 
 func main() {
 
-	elevio.Init()
+	elevio.DefaultInit()
 
 	//var d elevio.MotorDirection = elevio.MD_Up
 	//elevio.SetMotorDirection(d)
@@ -18,7 +20,7 @@ func main() {
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
-}
+
 
 for {
 	select {
@@ -43,7 +45,7 @@ for {
 		} else {
 			elevio.SetMotorDirection(d)
 		}
-		
+
 	case a := <- drv_stop:
 		fmt.Printf("%+v\n", a)
 		for f := 0; f < numFloors; f++ {
@@ -52,5 +54,6 @@ for {
 			}
 		}
 	}
-}    
 }
+    
+

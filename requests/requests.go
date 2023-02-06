@@ -1,6 +1,6 @@
 package requests
 
-import "../driver"
+import "Elevator/elevio"
 
 func requestAbove(elev Elevator) bool {
 	for floor := elev.floor + 1; floor < NUM_FLOORS; floor++ {
