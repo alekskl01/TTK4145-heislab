@@ -22,12 +22,12 @@ const (
 type elevator struct {
 	ELEVATOR_STATE State
 	FLOOR          int
-	DIRECTION      Motor_Direction // vet ikke om denne kan funke :P
+	DIRECTION      elevator.Motor_Direction // vet ikke om denne kan funke :P
 }
 
 func SetReady(system elevator) {
 	fmt.Println("PREPARING ELEVATOR...\n")
-	elevio.DefaultInit()	
+	elevio.DefaultInit()
 	for {
 
 	}
