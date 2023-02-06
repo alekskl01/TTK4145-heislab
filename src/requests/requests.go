@@ -69,7 +69,7 @@ func shouldStop(elev Elevator) bool {
 }
 
 func clearRequestsAtFloor(elev) {
-	for button := 0; button < NUM_BUTTONS {
+	for button := 0; button < NUM_BUTTONS; button++ {
 		elev.requests[elev.foor][button] = 0;
 	} 
 }

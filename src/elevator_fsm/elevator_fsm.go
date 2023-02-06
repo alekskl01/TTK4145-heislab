@@ -20,9 +20,10 @@ const (
 )
 
 type elevator struct {
-	ELEVATOR_STATE State
-	int 			FLOOR          
-	MotorDirection  DIRECTION      // vet ikke om denne kan funke :P
+	State			state
+	int 			floor          
+	MotorDirection  direction      // vet ikke om denne kan funke :P
+	int[][]			requests
 }
 
 func SetReady(system elevator) {
