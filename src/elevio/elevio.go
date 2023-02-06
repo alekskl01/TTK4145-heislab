@@ -1,9 +1,11 @@
 package elevio
 
-import "time"
-import "sync"
-import "net"
-import "fmt"
+import (
+	"fmt"
+	"net"
+	"sync"
+	"time"
+)
 
 const NUM_FLOORS int = 4
 const ADDR string = "localhost:15657"
@@ -39,7 +41,7 @@ type ButtonEvent struct {
 }
 
 // Initialize with default settings.
-func Init() {
+func DefaultInit() {
 	Init("", 0)
 }
 
