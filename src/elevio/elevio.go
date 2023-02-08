@@ -8,6 +8,8 @@ import (
 )
 
 const NUM_FLOORS int = 4
+const NUM_BUTTONS int = 3
+const WAIT_SECONDS int = 3
 const ADDR string = "localhost:15657"
 
 var _addr string = ADDR
@@ -61,6 +63,10 @@ func Init(addr string) {
 	_initialized = true
 }
 
+func IsValidFloor(floor int) bool {
+	return floor > 0 && floor < NUM_FLOORS
+}
+
 func SetMotorDirection(dir MotorDirection) {
 	write([4]byte{1, byte(dir), 0, 0})
 }
@@ -88,7 +94,7 @@ func PollButtons(receiver chan<- ButtonEvent) {
 		for f := 0; f < NUM_FLOORS; f++ {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
-				if v != prev[f][b] && v != false {
+				if v != prev[f][b] && v {
 					receiver <- ButtonEvent{f, ButtonType(b)}
 				}
 				prev[f][b] = v
