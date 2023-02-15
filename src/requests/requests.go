@@ -8,7 +8,7 @@ import (
 func ExistsRequestAbove(elev elevator.Elevator) bool {
 	for floor := elev.Floor + 1; floor < elevio.NUM_FLOORS; floor++ {
 		for button := 0; button < elevio.NUM_BUTTONS; button++ {
-			if elev.Requests[floor][button] == 1 {
+			if elev.Requests[floor][button] == true {
 				return true
 			}
 		}
@@ -19,7 +19,7 @@ func ExistsRequestAbove(elev elevator.Elevator) bool {
 func ExistsRequestBelow(elev elevator.Elevator) bool {
 	for floor := 0; floor < elev.Floor; floor++ {
 		for button := 0; button < elevio.NUM_BUTTONS; button++ {
-			if elev.Requests[floor][button] == 1 {
+			if elev.Requests[floor][button] == true {
 				return true
 			}
 		}
@@ -61,13 +61,13 @@ func ShouldStop(elev elevator.Elevator) bool {
 
 	switch elev.Direction {
 	case elevio.MD_Up:
-		return elev.Requests[floor][elevio.BT_HallUp] == 1 ||
-			elev.Requests[floor][elevio.BT_Cab] == 1 ||
+		return elev.Requests[floor][elevio.BT_HallUp] == true ||
+			elev.Requests[floor][elevio.BT_Cab] == true ||
 			!ExistsRequestAbove(elev)
 
 	case elevio.MD_Down:
-		return elev.Requests[floor][elevio.BT_HallDown] == 1 ||
-			elev.Requests[floor][elevio.BT_Cab] == 1 ||
+		return elev.Requests[floor][elevio.BT_HallDown] == true ||
+			elev.Requests[floor][elevio.BT_Cab] == true ||
 			!ExistsRequestBelow(elev)
 
 	default:

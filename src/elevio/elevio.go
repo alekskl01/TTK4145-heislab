@@ -9,7 +9,7 @@ import (
 
 const NUM_FLOORS int = 4
 const NUM_BUTTONS int = 3
-const WAIT_SECONDS int = 3
+const WAIT_DURATION time.Duration = 3e+9
 const ADDR string = "localhost:15657"
 
 var _addr string = ADDR
