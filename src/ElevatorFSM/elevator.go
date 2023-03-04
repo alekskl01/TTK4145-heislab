@@ -1,37 +1,38 @@
-package elevator
+package ElevatorFSM
 
 import (
 	"Elevator/elevio"
-	"fmt"
+	"Elevator/config"
+	//"fmt"
 )
 
 type ElevatorState int
 
 const (
 	DoorOpen ElevatorState = 0
-	Moving
-	Idle
-	MotorStop
+	Moving ElevatorState = 1
+	Idle ElevatorState = 2
+	MotorStop ElevatorState = 3
 )
 
 type Elevator struct {
 	state          ElevatorState
 	floor          int
 	direction      elevio.MotorDirection
-	requests       [elevio.NUM_FLOORS][elevio.NUM_BUTTONS]bool
+	requests       [config.N_FLOORS][config.N_BUTTONS]bool
 	obstruction     bool
 }
 
-func clearRequestsAtFloor(elev *Elevator) {
-	for button := 0; button < elevio.NUM_BUTTONS; button++ {
+func clearRequestAtFloor(elev *Elevator) {
+	for button := 0; button < config.N_BUTTONS; button++ {
 		elev.requests[elev.floor][button] = false
 		elevio.SetButtonLamp(elevio.ButtonType(button), elev.floor, false)
 	}
 }
 
 func clearAllRequests(elev *Elevator) {
-	for floor := 0; floor < elevio.NUM_FLOORS; floor++ {
-		for button := 0; button < elevio.NUM_BUTTONS; button++ {
+	for floor := 0; floor < config.N_FLOORS; floor++ {
+		for button := 0; button < config.N_BUTTONS; button++ {
 			elev.requests[elev.floor][button] = false
 			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 		}

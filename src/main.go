@@ -1,10 +1,9 @@
 package main
 
 import (
-	"Elevator/buttons"
-	"Elevator/elevator"
+
 	"Elevator/elevio"
-	"Elevator/fsm"
+	"Elevator/ElevatorFSM"
 )
 
 func main() {
@@ -21,5 +20,5 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	go fsm.RunStateMachine(drv_buttons, drv_floors, drv_obstr, drv_stop)
+	go ElevatorFSM.RunStateMachine(drv_buttons, drv_floors, drv_obstr, drv_stop)
 }
