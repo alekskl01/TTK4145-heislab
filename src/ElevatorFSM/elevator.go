@@ -3,7 +3,7 @@ package ElevatorFSM
 import (
 	"Elevator/elevio"
 	"Elevator/config"
-	//"fmt"
+	"time"
 )
 
 type ElevatorState int
@@ -21,12 +21,15 @@ type Elevator struct {
 	direction      elevio.MotorDirection
 	requests       [config.N_FLOORS][config.N_BUTTONS]bool
 	obstruction     bool
+	doorTimer      *time.Timer
+	motorStopTimer *time.Timer
 }
 
-func clearRequestAtFloor(elev *Elevator) {
+func clearRequestAtFloor(elev *Elevator, orderComplete chan<- elevio.ButtonEvent) {
 	for button := 0; button < config.N_BUTTONS; button++ {
 		elev.requests[elev.floor][button] = false
 		elevio.SetButtonLamp(elevio.ButtonType(button), elev.floor, false)
+		orderComplete <- elevio.ButtonEvent{Floor: elev.floor, Button: elevio.ButtonType(button)}
 	}
 }
 
@@ -45,6 +48,12 @@ func InitializeElevator() Elevator {
 	elevator.direction = elevio.MD_Stop
 	elevator.state = Idle
 	elevator.obstruction = false
+
+	//Timers
+	elevator.doorTimer = time.NewTimer(config.DOOR_OPEN_DURATION)
+	elevator.doorTimer.Stop()
+	elevator.motorStopTimer = time.NewTimer(config.MOTOR_STOP_DETECTION_TIME)
+	elevator.motorStopTimer.Stop()
 
 	//Make sure elevator is not between floors
 	elevator.direction = elevio.MD_Down
@@ -67,6 +76,20 @@ func GoUp(elevator *Elevator) {
 func GoDown(elevator *Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
 	elevator.direction = elevio.MD_Down
+}
+
+func setCabLights(elevator *Elevator) {
+	cab_button := elevio.ButtonType(2)
+
+	for f := 0; f < config.N_FLOORS; f++ {
+
+		if elevator.requests[f][cab_button] {
+			elevio.SetButtonLamp(cab_button, f, true)
+		} else {
+			elevio.SetButtonLamp(cab_button, f, false)
+		}
+
+	}
 }
 
 
