@@ -115,43 +115,6 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 	}
 }
 
-func onRequestButtonPress(button_msg elevio.ButtonEvent, elevator *Elevator, ch_orderComplete chan<- elevio.ButtonEvent) {
-
-	floor := button_msg.Floor
-	button_type := button_msg.Button
-
-	switch elevator.state {
-
-	case DoorOpen:
-		elevator.requests[floor][button_type] = true
-		if elevator.floor == floor {
-			clearRequestAtFloor(elevator, ch_orderComplete)
-			doorOpenTimer(elevator)
-		}
-
-	case Moving:
-		elevator.requests[floor][button_type] = true
-
-	case MotorStop:
-		elevator.requests[floor][button_type] = true
-
-	case Idle:
-		if elevator.floor == floor {
-			elevator.requests[floor][button_type] = true
-			clearRequestAtFloor(elevator, ch_orderComplete)
-			elevio.SetDoorOpenLamp(true)
-			doorOpenTimer(elevator)
-			elevator.state = DoorOpen
-		} else {
-			elevator.requests[floor][button_type] = true
-			elevator.direction = chooseDirection(*elevator)
-			elevio.SetMotorDirection(elevator.direction)
-			elevator.state = Moving
-			elevator.motorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
-		}
-	}
-}
-
 func onDoorTimeout(elevator *Elevator) {
 	if elevator.state == DoorOpen && !elevator.obstruction {
 		elevio.SetDoorOpenLamp(false)
