@@ -5,14 +5,11 @@ import (
 	"net"
 	"sync"
 	"time"
+	"Elevator/config"
 )
 
-const NUM_FLOORS int = 4
-const NUM_BUTTONS int = 3
-const WAIT_DURATION time.Duration = 3e+9
-const ADDR string = "localhost:15657"
 
-var _addr string = ADDR
+var _addr string = config.ADDR
 
 const _pollRate = 20 * time.Millisecond
 
@@ -64,7 +61,7 @@ func Init(addr string) {
 }
 
 func IsValidFloor(floor int) bool {
-	return floor > 0 && floor < NUM_FLOORS
+	return floor > 0 && floor < config.N_FLOORS
 }
 
 func SetMotorDirection(dir MotorDirection) {
@@ -88,10 +85,10 @@ func SetStopLamp(value bool) {
 }
 
 func PollButtons(receiver chan<- ButtonEvent) {
-	prev := make([][3]bool, NUM_FLOORS)
+	prev := make([][3]bool, config.N_FLOORS)
 	for {
 		time.Sleep(_pollRate)
-		for f := 0; f < NUM_FLOORS; f++ {
+		for f := 0; f < config.N_FLOORS; f++ {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v {
