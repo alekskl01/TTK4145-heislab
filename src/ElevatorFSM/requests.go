@@ -6,9 +6,9 @@ import (
 )
 
 func existsRequestsAbove(elev Elevator) bool {
-	for floor := elev.floor + 1; floor < config.N_FLOORS; floor++ {
+	for floor := elev.Floor + 1; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			if elev.requests[floor][button] {
+			if elev.Requests[floor][button] {
 				return true
 			}
 		}
@@ -17,9 +17,9 @@ func existsRequestsAbove(elev Elevator) bool {
 }
 
 func existsRequestsBelow(elev Elevator) bool {
-	for floor := 0; floor < elev.floor; floor++ {
+	for floor := 0; floor < elev.Floor; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			if elev.requests[floor][button] {
+			if elev.Requests[floor][button] {
 				return true
 			}
 		}
@@ -28,7 +28,7 @@ func existsRequestsBelow(elev Elevator) bool {
 }
 
 func chooseDirection(elev Elevator) elevio.MotorDirection {
-	switch elev.direction {
+	switch elev.Direction {
 
 	case elevio.MD_Stop:
 		fallthrough
@@ -59,17 +59,17 @@ func chooseDirection(elev Elevator) elevio.MotorDirection {
 }
 
 func shouldStop(elev Elevator) bool {
-	var floor int = elev.floor
+	var floor int = elev.Floor
 
-	switch elev.direction {
+	switch elev.Direction {
 	case elevio.MD_Up:
-		return elev.requests[floor][elevio.BT_HallUp] ||
-			elev.requests[floor][elevio.BT_Cab] ||
+		return elev.Requests[floor][elevio.BT_HallUp] ||
+			elev.Requests[floor][elevio.BT_Cab] ||
 			!existsRequestsAbove(elev)
 
 	case elevio.MD_Down:
-		return elev.requests[floor][elevio.BT_HallDown] ||
-			elev.requests[floor][elevio.BT_Cab] ||
+		return elev.Requests[floor][elevio.BT_HallDown] ||
+			elev.Requests[floor][elevio.BT_Cab] ||
 			!existsRequestsBelow(elev)
 
 	}

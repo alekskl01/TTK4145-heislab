@@ -11,7 +11,6 @@ import (
 )
 
 type StateMessage struct {
-	senderId  string
 	floor     string
 	direction elevio.MotorDirection
 }
@@ -19,15 +18,14 @@ type StateMessage struct {
 type ActionType int
 
 const (
-	newRequest      ActionType = 0
-	finishedRequest ActionType = 1
+	NewRequest      ActionType = 0
+	FinishedRequest ActionType = 1
 )
 
 // Either represents a new request being added or a request being fulfilled.
 type ActionMessage struct {
-	senderId   string
-	floor      string
-	actionType ActionType
+	Floor      int
+	ActionType ActionType
 }
 
 func GetID() string {

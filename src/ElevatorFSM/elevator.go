@@ -3,6 +3,7 @@ package ElevatorFSM
 import (
 	"Elevator/config"
 	"Elevator/elevio"
+	"Elevator/network"
 	"time"
 )
 
@@ -16,27 +17,27 @@ const (
 )
 
 type Elevator struct {
-	state          ElevatorState
-	floor          int
-	direction      elevio.MotorDirection
-	requests       [config.N_FLOORS][config.N_BUTTONS]bool
-	obstruction    bool
-	doorTimer      *time.Timer
-	motorStopTimer *time.Timer
+	State          ElevatorState
+	Floor          int
+	Direction      elevio.MotorDirection
+	Requests       [config.N_FLOORS][config.N_BUTTONS]bool
+	Obstruction    bool
+	DoorTimer      *time.Timer
+	MotorStopTimer *time.Timer
 }
 
-func clearRequestAtFloor(elev *Elevator, orderComplete chan<- elevio.ButtonEvent) {
+func clearRequestAtFloor(elev *Elevator, orderComplete chan<- network.ActionMessage) {
 	for button := 0; button < config.N_BUTTONS; button++ {
-		elev.requests[elev.floor][button] = false
-		elevio.SetButtonLamp(elevio.ButtonType(button), elev.floor, false)
-		//orderComplete <- elevio.ButtonEvent{Floor: elev.floor, Button: elevio.ButtonType(button)}
+		elev.Requests[elev.Floor][button] = false
+		elevio.SetButtonLamp(elevio.ButtonType(button), elev.Floor, false)
+		orderComplete <- network.ActionMessage{elev.Floor, network.FinishedRequest}
 	}
 }
 
 func clearAllRequests(elev *Elevator) {
 	for floor := 0; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			elev.requests[elev.floor][button] = false
+			elev.Requests[elev.Floor][button] = false
 			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 		}
 	}
@@ -44,48 +45,55 @@ func clearAllRequests(elev *Elevator) {
 
 func InitializeElevator() Elevator {
 	elevator := new(Elevator)
-	elevator.floor = -1
-	elevator.direction = elevio.MD_Stop
-	elevator.state = Idle
-	elevator.obstruction = false
+	elevator.Floor = -1
+	elevator.Direction = elevio.MD_Stop
+	elevator.State = Idle
+	elevator.Obstruction = false
 
 	//Timers
-	elevator.doorTimer = time.NewTimer(config.DOOR_OPEN_DURATION)
-	elevator.doorTimer.Stop()
-	elevator.motorStopTimer = time.NewTimer(config.MOTOR_STOP_DETECTION_TIME)
-	elevator.motorStopTimer.Stop()
+	elevator.DoorTimer = time.NewTimer(config.DOOR_OPEN_DURATION)
+	elevator.DoorTimer.Stop()
+	elevator.MotorStopTimer = time.NewTimer(config.MOTOR_STOP_DETECTION_TIME)
+	elevator.MotorStopTimer.Stop()
 
 	//Make sure elevator is not between floors
-	elevator.direction = elevio.MD_Down
-	elevio.SetMotorDirection(elevator.direction)
-	elevator.state = Moving
+	elevator.Direction = elevio.MD_Down
+	elevio.SetMotorDirection(elevator.Direction)
+	elevator.State = Moving
 
 	return *elevator
 }
 
 func Stop(elevator *Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Stop)
-	elevator.direction = elevio.MD_Stop
+	elevator.Direction = elevio.MD_Stop
 }
 
 func GoUp(elevator *Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Up)
-	elevator.direction = elevio.MD_Up
+	elevator.Direction = elevio.MD_Up
 }
 
 func GoDown(elevator *Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
-	elevator.direction = elevio.MD_Down
+	elevator.Direction = elevio.MD_Down
 }
 
 func setButtonLights(elevator *Elevator) {
 	for f := 0; f < config.N_FLOORS; f++ {
 		for b := 0; b < config.N_BUTTONS; b++ {
-			if elevator.requests[f][b] {
+			if elevator.Requests[f][b] {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, true)
 			} else {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, false)
 			}
 		}
+	}
+}
+
+func BroadcastState(elevator *Elevator, stateCh chan<- network.StateMessage) {
+	for {
+		stateCh <- network.StateMessage{elevator.Floor, elevator.Direction}
+		time.Sleep(time.Millisecond * 200)
 	}
 }
