@@ -30,7 +30,7 @@ type ActionMessage struct {
 	actionType ActionType
 }
 
-func getID() string {
+func GetID() string {
 	// ... or alternatively, we can use the local IP address.
 	// (But since we can run multiple programs on the same PC, we also append the
 	//  process ID)
@@ -42,9 +42,7 @@ func getID() string {
 	return fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 }
 
-var id = getID()
-
-func initPeerManagement(id string, peerUpdateCh chan peers.PeerUpdate) {
+func InitPeerManagement(id string, peerUpdateCh chan peers.PeerUpdate) {
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
 	//peerUpdateCh := make(chan peers.PeerUpdate)
@@ -55,12 +53,12 @@ func initPeerManagement(id string, peerUpdateCh chan peers.PeerUpdate) {
 	go peers.Receiver(config.PEER_MANAGEMENT_PORT, peerUpdateCh)
 }
 
-func initStateSynchronizationChannels(id string, stateTxCh chan StateMessage, stateRxCh chan StateMessage) {
+func InitStateSynchronizationChannels(id string, stateTxCh chan StateMessage, stateRxCh chan StateMessage) {
 	go bcast.Transmitter(config.STATE_BROADCAST_PORT, stateTxCh)
 	go bcast.Receiver(config.STATE_BROADCAST_PORT, stateRxCh)
 }
 
-func initActionSynchronizationChannels(id string, actionTxCh chan ActionMessage, actionRxCh chan ActionMessage) {
+func InitActionSynchronizationChannels(id string, actionTxCh chan ActionMessage, actionRxCh chan ActionMessage) {
 	go bcast.Transmitter(config.STATE_BROADCAST_PORT, actionTxCh)
 	go bcast.Receiver(config.STATE_BROADCAST_PORT, actionRxCh)
 }

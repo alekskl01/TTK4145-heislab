@@ -4,11 +4,26 @@ import (
 	"Elevator/ElevatorFSM"
 	"Elevator/config"
 	"Elevator/elevio"
+	"Elevator/network"
+	"Elevator/network/peers"
+
 	//"fmt"
 	"time"
 )
 
 func main() {
+
+	// Initiate Networking Channels
+	peerUpdateCh := make(chan peers.PeerUpdate)
+	stateTxCh := make(chan network.StateMessage)
+	stateRxCh := make(chan network.StateMessage)
+	actionTxCh := make(chan network.ActionMessage)
+	actionRxCh := make(chan network.ActionMessage)
+
+	var networkId = network.GetID()
+	network.InitPeerManagement(networkId, peerUpdateCh)
+	network.InitStateSynchronizationChannels(networkId, stateTxCh, stateRxCh)
+	network.InitActionSynchronizationChannels(networkId, actionTxCh, actionRxCh)
 
 	elevio.DefaultInit()
 
