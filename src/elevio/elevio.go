@@ -1,13 +1,12 @@
 package elevio
 
 import (
+	"Elevator/config"
 	"fmt"
 	"net"
 	"sync"
 	"time"
-	"Elevator/config"
 )
-
 
 var _addr string = config.ADDR
 
@@ -49,7 +48,7 @@ func Init(addr string) {
 		return
 	}
 	if addr == "" {
-		_addr = addr
+		addr = _addr
 	}
 	_mtx = sync.Mutex{}
 	var err error

@@ -2,6 +2,7 @@ package config
 
 import "time"
 
+
 const N_FLOORS int = 4
 const N_BUTTONS int = 3
 const ADDR string = "localhost:15657"
