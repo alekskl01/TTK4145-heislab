@@ -1,10 +1,11 @@
 package main
 
 import (
-
-	"Elevator/elevio"
 	"Elevator/ElevatorFSM"
 	"Elevator/config"
+	"Elevator/elevio"
+	//"fmt"
+	"time"
 )
 
 func main() {
@@ -24,4 +25,8 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	go ElevatorFSM.RunStateMachine(drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, FSM_OrderComplete)
+
+	for {
+		time.Sleep(time.Second * 20)
+	}
 }

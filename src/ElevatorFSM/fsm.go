@@ -17,7 +17,6 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 			button_type := order.Button
 
 			switch elevator.state {
-
 			case DoorOpen:
 				elevator.requests[floor][button_type] = true
 				if elevator.floor == floor {
@@ -46,7 +45,7 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 					elevator.motorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 				}
 			}
-			setCabLights(&elevator)
+			setButtonLights(&elevator)
 
 		case newFloor := <-event_floorArrival:
 			elevator.floor = newFloor
@@ -61,7 +60,7 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 					elevator.motorStopTimer.Stop()
 
 					doorOpenTimer(&elevator)
-					setCabLights(&elevator)
+					setButtonLights(&elevator)
 
 					elevator.state = DoorOpen
 				} else {
@@ -77,7 +76,7 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 					elevator.motorStopTimer.Stop()
 
 					doorOpenTimer(&elevator)
-					setCabLights(&elevator)
+					setButtonLights(&elevator)
 
 					elevator.state = DoorOpen
 				} else {
@@ -94,7 +93,15 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 				elevio.SetDoorOpenLamp(true)
 			}
 
-			//onDoorTimeout(&elevator)
+			onDoorTimeout(&elevator)
+
+		case <-elevator.doorTimer.C:
+			if elevator.obstruction {
+				ch_elevatorUnavailable <- true
+				//clear All Hall Requests
+			} else {
+				onDoorTimeout(&elevator)
+			}
 
 		case <-elevator.motorStopTimer.C:
 			switch elevator.state {
