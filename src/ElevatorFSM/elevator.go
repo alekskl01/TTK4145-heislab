@@ -26,23 +26,6 @@ type Elevator struct {
 	MotorStopTimer *time.Timer
 }
 
-func clearRequestAtFloor(elev *Elevator, orderComplete chan<- network.ActionMessage) {
-	for button := 0; button < config.N_BUTTONS; button++ {
-		elev.Requests[elev.Floor][button] = false
-		elevio.SetButtonLamp(elevio.ButtonType(button), elev.Floor, false)
-		orderComplete <- network.ActionMessage{elev.Floor, network.FinishedRequest}
-	}
-}
-
-func clearAllRequests(elev *Elevator) {
-	for floor := 0; floor < config.N_FLOORS; floor++ {
-		for button := 0; button < config.N_BUTTONS; button++ {
-			elev.Requests[elev.Floor][button] = false
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
-		}
-	}
-}
-
 func InitializeElevator() Elevator {
 	elevator := new(Elevator)
 	elevator.Floor = -1

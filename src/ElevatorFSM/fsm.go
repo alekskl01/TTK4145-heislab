@@ -60,6 +60,7 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 			case Moving:
 				if shouldStop(elevator) {
 					elevio.SetMotorDirection(elevio.MD_Stop)
+
 					clearRequestAtFloor(&elevator, actionTxCh)
 					elevator.MotorStopTimer.Stop()
 
@@ -102,7 +103,6 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 		case <-elevator.DoorTimer.C:
 			if elevator.Obstruction {
 				ch_elevatorUnavailable <- true
-				//clear All Hall Requests
 			} else {
 				onDoorTimeout(&elevator)
 			}
@@ -127,16 +127,37 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 }
 
 func onDoorTimeout(elevator *Elevator) {
-	if elevator.State == DoorOpen && !elevator.Obstruction {
-		elevio.SetDoorOpenLamp(false)
-		elevator.Direction = chooseDirection(*elevator)
-		elevio.SetMotorDirection(elevator.Direction)
+	floor := elevator.Floor
 
-		if elevator.Direction == elevio.MD_Stop {
-			elevator.State = Idle
+	// Checks if elevator has a reason to travel in direction decided when floor 
+	// was reached if uncerviced hall orders exist on the current floor, and services the hall order if not.
+
+	if elevator.State == DoorOpen && !elevator.Obstruction {
+		if elevator.Requests[floor][elevio.BT_HallDown] {
+			if !existsRequestsAbove(*elevator) {
+				elevator.Requests[floor][elevio.BT_HallDown] = false
+				doorOpenTimer(elevator)
+				setButtonLights(elevator)
+				elevator.State = DoorOpen
+			}
+		} else if elevator.Requests[elevator.Floor][elevio.BT_HallUp] {
+			if !existsRequestsBelow(*elevator) {
+				elevator.Requests[floor][elevio.BT_HallUp] = false
+				doorOpenTimer(elevator)
+				setButtonLights(elevator)
+				elevator.State = DoorOpen
+			}
 		} else {
-			elevator.State = Moving
-			elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
+			elevio.SetDoorOpenLamp(false)
+			elevator.Direction = chooseDirection(*elevator)
+			elevio.SetMotorDirection(elevator.Direction)
+
+			if elevator.Direction == elevio.MD_Stop {
+				elevator.State = Idle
+			} else {
+				elevator.State = Moving
+				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
+			}
 		}
 	}
 }

@@ -3,6 +3,7 @@ package ElevatorFSM
 import (
 	"Elevator/config"
 	"Elevator/elevio"
+	"Elevator/network"
 )
 
 func existsRequestsAbove(elev Elevator) bool {
@@ -75,3 +76,40 @@ func shouldStop(elev Elevator) bool {
 	}
 	return true
 }
+
+func clearRequestAtFloor(elev *Elevator, orderComplete chan<- network.ActionMessage) {
+
+	nextDirection := chooseDirection(*elev)
+	var servicedHallRequest elevio.ButtonType
+
+	switch nextDirection {
+	case elevio.MD_Stop:
+		fallthrough
+
+	case elevio.MD_Up:
+		servicedHallRequest = elevio.BT_HallUp
+
+	case elevio.MD_Down:
+		servicedHallRequest = elevio.BT_HallDown
+	}
+	
+	//TODO: improve code quality
+
+	elev.Requests[elev.Floor][elevio.BT_Cab] = false
+	elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), elev.Floor, false)
+	orderComplete <- network.ActionMessage{elev.Floor, network.FinishedRequest}
+
+	elev.Requests[elev.Floor][servicedHallRequest] = false
+	elevio.SetButtonLamp(elevio.ButtonType(servicedHallRequest), elev.Floor, false)
+	orderComplete <- network.ActionMessage{elev.Floor, network.FinishedRequest}
+}
+
+func clearAllRequests(elev *Elevator) {
+	for floor := 0; floor < config.N_FLOORS; floor++ {
+		for button := 0; button < config.N_BUTTONS; button++ {
+			elev.Requests[elev.Floor][button] = false
+			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
+		}
+	}
+}
+
