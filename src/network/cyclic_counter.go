@@ -1,4 +1,4 @@
-package requestSync
+package network
 
 import (
 	"Elevator/ElevatorFSM"
@@ -16,7 +16,11 @@ const (
 func cyclicCounter(elev ElevatorFSM.Elevator, myOrderState RequestState, otherOrderState []RequestState) {
 	switch myOrderState {
 	case NoRequest:
-		break
+		for _, RequestState := range otherOrderState {
+			if RequestState == RecievedRequest {
+				elev.Requests[][]
+			}
+		}
 	
 	case RecievedRequest:
 		break
@@ -26,6 +30,6 @@ func cyclicCounter(elev ElevatorFSM.Elevator, myOrderState RequestState, otherOr
 
 	case DeleteRequest:
 		break
-		
+
 	}
 }
