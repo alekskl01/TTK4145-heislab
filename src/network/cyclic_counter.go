@@ -18,7 +18,7 @@ func cyclicCounter(elev ElevatorFSM.Elevator, myOrderState RequestState, otherOr
 	case NoRequest:
 		for _, RequestState := range otherOrderState {
 			if RequestState == RecievedRequest {
-				elev.Requests[][]
+				elev.Requests[]
 			}
 		}
 	
