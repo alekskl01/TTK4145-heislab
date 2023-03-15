@@ -1,0 +1,12 @@
+Aleksander (the non shady one):
+  Cyclic order counter logic, fix state machine.
+
+Aleksander (the shady one):
+  Do networking logic with order states and continous brodcasting, pass information from other elevators to calculate local order states.
+  Convert requestmatrix to use order states instead of binaries.
+  Function to return all active elevators, and to get list of orderstates for specific ordertype for all elevators.
+ 
+ Elias (the one and only):
+  Cost function for assigning orders using information about local elevator state and states of other elevators. 
+  Kun hall orders blir bestemt behandlet, mens cab orders må ta del i beregningen.
+  
