@@ -19,6 +19,7 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 
 			switch elevator.State {
 			case DoorOpen:
+				// TODO: check that all counters are in the right and same state before adding or removing orders
 				elevator.Requests[floor][button_type] = true
 				if elevator.Floor == floor {
 					clearRequestAtFloor(&elevator, actionTxCh)

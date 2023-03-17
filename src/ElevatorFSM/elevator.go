@@ -20,7 +20,7 @@ type Elevator struct {
 	State          ElevatorState
 	Floor          int
 	Direction      elevio.MotorDirection
-	Requests       [config.N_FLOORS][config.N_BUTTONS]bool
+	Requests       [config.N_FLOORS][config.N_BUTTONS] RequestState
 	Obstruction    bool
 	DoorTimer      *time.Timer
 	MotorStopTimer *time.Timer
