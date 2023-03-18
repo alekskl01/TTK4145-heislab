@@ -19,28 +19,38 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 
 			switch elevator.State {
 			case DoorOpen:
-				// TODO: check that all counters are in the right and same state before adding or removing orders
-				elevator.Requests[floor][button_type] = true
+				if orderStatesEqualTo(NoRequest, elevator.Requests[floor][button_type], otherStates) {
+					elevator.Requests[floor][button_type] = PendingRequest
+				}
+
 				if elevator.Floor == floor {
 					clearRequestAtFloor(&elevator, actionTxCh)
 					doorOpenTimer(&elevator)
 				}
 
 			case Moving:
-				elevator.Requests[floor][button_type] = true
+				if orderStatesEqualTo(NoRequest, elevator.Requests[floor][button_type], otherStates) {
+					elevator.Requests[floor][button_type] = PendingRequest
+				}
 
 			case MotorStop:
-				elevator.Requests[floor][button_type] = true
+				if orderStatesEqualTo(NoRequest, elevator.Requests[floor][button_type], otherStates) {
+					elevator.Requests[floor][button_type] = PendingRequest
+				}
 
 			case Idle:
 				if elevator.Floor == floor {
-					elevator.Requests[floor][button_type] = true
+					if orderStatesEqualTo(NoRequest, elevator.Requests[floor][button_type], otherStates) {
+						elevator.Requests[floor][button_type] = PendingRequest
+					}
 					clearRequestAtFloor(&elevator, actionTxCh)
 					elevio.SetDoorOpenLamp(true)
 					doorOpenTimer(&elevator)
 					elevator.State = DoorOpen
 				} else {
-					elevator.Requests[floor][button_type] = true
+					if orderStatesEqualTo(NoRequest, elevator.Requests[floor][button_type], otherStates) {
+						elevator.Requests[floor][button_type] = PendingRequest
+					}
 					elevator.Direction = chooseDirection(elevator)
 					elevio.SetMotorDirection(elevator.Direction)
 					elevator.State = Moving
@@ -114,7 +124,9 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 				elevator.State = MotorStop
 				ch_elevatorUnavailable <- true
 				if !existsRequestsBelow(elevator) && !existsRequestsAbove(elevator) {
-					elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab] = true
+					if orderStatesEqualTo(NoRequest, elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab], otherStates) {
+						elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab] = PendingRequest
+					}
 				}
 				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 
@@ -136,14 +148,18 @@ func onDoorTimeout(elevator *Elevator) {
 	if elevator.State == DoorOpen && !elevator.Obstruction {
 		if elevator.Requests[floor][elevio.BT_HallDown] {
 			if !existsRequestsAbove(*elevator) {
-				elevator.Requests[floor][elevio.BT_HallDown] = false
+				if orderStatesEqualTo(ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
+					elevator.Requests[floor][elevio.BT_HallDown] = DeleteRequest
+				}
 				doorOpenTimer(elevator)
 				setButtonLights(elevator)
 				elevator.State = DoorOpen
 			}
 		} else if elevator.Requests[elevator.Floor][elevio.BT_HallUp] {
 			if !existsRequestsBelow(*elevator) {
-				elevator.Requests[floor][elevio.BT_HallUp] = false
+				if orderStatesEqualTo(ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
+					elevator.Requests[floor][elevio.BT_HallUp] = DeleteRequest
+				}
 				doorOpenTimer(elevator)
 				setButtonLights(elevator)
 				elevator.State = DoorOpen
@@ -168,3 +184,4 @@ func doorOpenTimer(elevator *Elevator) {
 	elevio.SetDoorOpenLamp(true)
 	elevator.DoorTimer.Reset(doorOpenTime)
 }
+

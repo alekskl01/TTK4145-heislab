@@ -1,6 +1,5 @@
 Aleksander (the non shady one):
   Cyclic order counter logic, fix state machine.
-    remove or add order if valid
     initialize properly when reconnecting
 
 Aleksander (the shady one):

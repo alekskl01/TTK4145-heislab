@@ -8,12 +8,12 @@ type RequestState int
 
 const (
 	NoRequest   RequestState = iota
-	RecievedRequest                
+	PendingRequest                
 	ActiveRequest
 	DeleteRequest              
 )
 
-func checkEqualityForArray(myState RecievedRequest, otherState []RequestState) bool {
+func checkEqualityForArray(myState RequestRequest, otherState []RequestState) bool {
 	for _, RequestState := range otherState {
 		if RequestState != myState {
 			return false
@@ -22,9 +22,18 @@ func checkEqualityForArray(myState RecievedRequest, otherState []RequestState) b
 	return true
 }
 
-func otherCountersAhead(myState RequestState, otherState []RequestState, nextState RequestState) bool {
-	for _, state := range otherOrderState {
-		if state == nextState {
+func otherCountersAhead(myNextState RequestState, otherState []RequestState) bool {
+	for _, state := range otherState {
+		if state == myNextState {
+			return true
+		}
+	}
+	return false
+}
+
+func orderStatesEqualTo(checkState RequestState, myState RequestState, otherState []RequestState) {
+	if myState == checkState {
+		if checkEqualityForArray(checkState, otherState) {
 			return true
 		}
 	}
@@ -32,7 +41,7 @@ func otherCountersAhead(myState RequestState, otherState []RequestState, nextSta
 }
 
 
-func cyclicCounter(elev &ElevatorFSM.Elevator, order ButtonEvent, otherOrderState []RequestState) {
+func cyclicCounter(elev &ElevatorFSM.Elevator, order ButtonEvent, otherState []RequestState) {
 	floor := order.Floor
 	button_type := order.Button
 
@@ -40,31 +49,31 @@ func cyclicCounter(elev &ElevatorFSM.Elevator, order ButtonEvent, otherOrderStat
 
 	switch myOrderState {
 	case NoRequest:
-		if otherCountersAhead(myState, otherOrderState, RecievedRequest) {
-			elev.Requests[floor][button_type] = RecievedRequest
+		if otherCountersAhead(myState, otherState, PendingRequest) {
+			elev.Requests[floor][button_type] = PendingRequest
 		}
 	
-	case RecievedRequest:
-		if checkEqualityForArray(myState, otherOrderState) {
+	case PendingRequest:
+		if checkEqualityForArray(myState, otherState) {
 			elev.Requests[floor][button_type] = ActiveRequest
 			// TODO: Turn on button light somewhere
 
-		} else if otherCountersAhead(myState, otherOrderState, ActiveRequest) {
+		} else if otherCountersAhead(myState, otherState, ActiveRequest) {
 			elev.Requests[floor][button_type] = ActiveRequest
 			// TODO: Turn on button light somewhere
 		}
 	
 	case ActiveRequest:
-		if otherCountersAhead(myState, otherOrderState, DeleteRequest) {
+		if otherCountersAhead(myState, otherState, DeleteRequest) {
 			elev.Requests[floor][button_type] = DeleteRequest
 		}
 
 	case DeleteRequest:
-		if checkEqualityForArray(myState, otherOrderState) {
+		if checkEqualityForArray(myState, otherState) {
 			elev.Requests[floor][button_type] = NoRequest
 			// TODO: Turn off button light somewhere
 
-		} else if otherCountersAhead(myState, otherOrderState, ActiveRequest) {
+		} else if otherCountersAhead(myState, otherState, ActiveRequest) {
 			elev.Requests[floor][button_type] = NoRequest
 			// TODO: Turn off button light somewhere
 		}

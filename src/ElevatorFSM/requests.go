@@ -94,22 +94,25 @@ func clearRequestAtFloor(elev *Elevator, orderComplete chan<- network.ActionMess
 	}
 	
 	//TODO: improve code quality
-
-	elev.Requests[elev.Floor][elevio.BT_Cab] = false
+	if orderStatesEqualTo(ActiveRequest, elev.Requests[elev.Floor][elevio.BT_Cab], otherStates) {
+		elev.Requests[elev.Floor][elevio.BT_Cab] = DeleteRequest
+	}
 	elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), elev.Floor, false)
 	orderComplete <- network.ActionMessage{elev.Floor, network.FinishedRequest}
 
-	elev.Requests[elev.Floor][servicedHallRequest] = false
+	if orderStatesEqualTo(ActiveRequest, elev.Requests[elev.Floor][servicedHallRequest], otherStates) {
+		elev.Requests[elev.Floor][servicedHallRequest] = DeleteRequest
+	}
 	elevio.SetButtonLamp(elevio.ButtonType(servicedHallRequest), elev.Floor, false)
 	orderComplete <- network.ActionMessage{elev.Floor, network.FinishedRequest}
 }
 
-func clearAllRequests(elev *Elevator) {
-	for floor := 0; floor < config.N_FLOORS; floor++ {
-		for button := 0; button < config.N_BUTTONS; button++ {
-			elev.Requests[elev.Floor][button] = false
-			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
-		}
-	}
-}
+// func clearAllRequests(elev *Elevator) {
+// 	for floor := 0; floor < config.N_FLOORS; floor++ {
+// 		for button := 0; button < config.N_BUTTONS; button++ {
+// 			elev.Requests[elev.Floor][button] = false
+// 			elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
+// 		}
+// 	}
+// }
 
