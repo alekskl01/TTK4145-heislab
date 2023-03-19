@@ -1,9 +1,9 @@
-package ElevatorFSM
+package elevatorFSM
 
 import (
 	"Elevator/config"
 	"Elevator/elevio"
-	"Elevator/network"
+	"Elevator/request"
 	"time"
 )
 
@@ -20,7 +20,7 @@ type Elevator struct {
 	State          ElevatorState
 	Floor          int
 	Direction      elevio.MotorDirection
-	Requests       [config.N_FLOORS][config.N_BUTTONS] RequestState
+	Requests       [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 	Obstruction    bool
 	DoorTimer      *time.Timer
 	MotorStopTimer *time.Timer
@@ -71,12 +71,5 @@ func setButtonLights(elevator *Elevator) {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, false)
 			}
 		}
-	}
-}
-
-func BroadcastState(elevator *Elevator, stateCh chan<- network.StateMessage) {
-	for {
-		stateCh <- network.StateMessage{elevator.Floor, elevator.Direction}
-		time.Sleep(time.Millisecond * 200)
 	}
 }

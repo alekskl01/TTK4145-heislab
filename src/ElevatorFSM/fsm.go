@@ -1,15 +1,12 @@
-package ElevatorFSM
+package elevatorFSM
 
 import (
 	"Elevator/config"
 	"Elevator/elevio"
-	"Elevator/network"
 )
 
-func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArrival <-chan int,
+func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonEvent, event_floorArrival <-chan int,
 	event_obstruction <-chan bool, event_stopButton <-chan bool, ch_elevatorUnavailable chan<- bool, actionTxCh chan<- network.ActionMessage) {
-
-	elevator := InitializeElevator()
 
 	for {
 		select {
@@ -142,7 +139,7 @@ func RunStateMachine(event_buttonPress <-chan elevio.ButtonEvent, event_floorArr
 func onDoorTimeout(elevator *Elevator) {
 	floor := elevator.Floor
 
-	// Checks if elevator has a reason to travel in direction decided when floor 
+	// Checks if elevator has a reason to travel in direction decided when floor
 	// was reached if uncerviced hall orders exist on the current floor, and services the hall order if not.
 
 	if elevator.State == DoorOpen && !elevator.Obstruction {
@@ -184,4 +181,3 @@ func doorOpenTimer(elevator *Elevator) {
 	elevio.SetDoorOpenLamp(true)
 	elevator.DoorTimer.Reset(doorOpenTime)
 }
-

@@ -2,61 +2,81 @@ package network
 
 import (
 	"Elevator/config"
+	"Elevator/elevatorFSM"
 	"Elevator/elevio"
 	"Elevator/network/bcast"
 	"Elevator/network/localip"
 	"Elevator/network/peers"
+	"Elevator/request"
 	"fmt"
-	"os"
+	"time"
 )
 
-type StateMessage struct {
-	floor     string
-	direction elevio.MotorDirection
+var networkRequests map[string](SyncState)
+var connectedNodes []string
+
+// Only needs to be determined once on startup
+var localID = GetID()
+
+type SyncMessage struct {
+	ID    string
+	State SyncState
 }
 
-type ActionType int
+type SyncState struct {
+	Floor     int
+	Direction elevio.MotorDirection
+	Requests  [config.N_FLOORS][config.N_BUTTONS]request.RequestState
+}
 
-const (
-	NewRequest      ActionType = 0
-	FinishedRequest ActionType = 1
-)
+func GetRequestStatesAtIndex(floor int, button int) []request.RequestState {
+	var retval []request.RequestState
+	var requests = networkRequests
 
-// Either represents a new request being added or a request being fulfilled.
-type ActionMessage struct {
-	Floor      int
-	ActionType ActionType
+	for _, nodeRequests := range requests {
+		var state = nodeRequests.Requests[floor][button]
+		retval = append(retval, state)
+	}
+	return retval
 }
 
 func GetID() string {
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
+	// We assume one elevator per local ip because of hardware limits.
 	localIP, err := localip.LocalIP()
 	if err != nil {
 		fmt.Println(err)
 		localIP = "DISCONNECTED"
 	}
-	return fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
+	return localIP
 }
 
-func InitPeerManagement(id string, peerUpdateCh chan peers.PeerUpdate) {
+func InitSyncReciever() {
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
-	//peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	peerTxEnable := make(chan bool)
-	go peers.Transmitter(config.PEER_MANAGEMENT_PORT, id, peerTxEnable)
+	peerUpdateCh := make(chan peers.PeerUpdate)
+	syncRxCh := make(chan SyncMessage)
 	go peers.Receiver(config.PEER_MANAGEMENT_PORT, peerUpdateCh)
+	go bcast.Receiver(config.BROADCAST_PORT, syncRxCh)
+	for {
+		select {
+		case p := <-peerUpdateCh:
+			if p.New != "" || len(p.Lost) > 0 {
+				connectedNodes = p.Peers
+			}
+		case m := <-syncRxCh:
+			state, ok := networkRequests[m.ID]
+			if !ok || state != m.State {
+				networkRequests[m.ID] = state
+			}
+		}
+	}
 }
 
-func InitStateSynchronizationChannels(id string, stateTxCh chan StateMessage, stateRxCh chan StateMessage) {
-	go bcast.Transmitter(config.STATE_BROADCAST_PORT, stateTxCh)
-	go bcast.Receiver(config.STATE_BROADCAST_PORT, stateRxCh)
-}
-
-func InitActionSynchronizationChannels(id string, actionTxCh chan ActionMessage, actionRxCh chan ActionMessage) {
-	go bcast.Transmitter(config.STATE_BROADCAST_PORT, actionTxCh)
-	go bcast.Receiver(config.STATE_BROADCAST_PORT, actionRxCh)
+func BroadcastState(elev *elevatorFSM.Elevator) {
+	syncTxCh := make(chan SyncMessage)
+	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
+	for {
+		syncTxCh <- SyncMessage{GetID(), SyncState{elev.Floor, elev.Direction, elev.Requests}}
+		time.Sleep(250 * time.Millisecond)
+	}
 }

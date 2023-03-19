@@ -1,11 +1,10 @@
 package main
 
 import (
-	"Elevator/ElevatorFSM"
 	"Elevator/config"
+	"Elevator/elevatorFSM"
 	"Elevator/elevio"
 	"Elevator/network"
-	"Elevator/network/peers"
 
 	//"fmt"
 	"time"
@@ -14,19 +13,9 @@ import (
 func main() {
 
 	// Initiate Networking Channels
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	stateTxCh := make(chan network.StateMessage)
-	stateRxCh := make(chan network.StateMessage)
-	actionTxCh := make(chan network.ActionMessage)
-	actionRxCh := make(chan network.ActionMessage)
-
-	var networkId = network.GetID()
-	network.InitPeerManagement(networkId, peerUpdateCh)
-	network.InitStateSynchronizationChannels(networkId, stateTxCh, stateRxCh)
-	network.InitActionSynchronizationChannels(networkId, actionTxCh, actionRxCh)
 
 	elevio.DefaultInit()
-
+	elevator := elevatorFSM.InitializeElevator()
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
@@ -39,7 +28,9 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	go ElevatorFSM.RunStateMachine(drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, FSM_OrderComplete)
+	go network.BroadcastState(&elevator)
+	go network.InitSyncReciever()
+	go elevatorFSM.RunStateMachine(&elevator, drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, FSM_OrderComplete)
 
 	for {
 		time.Sleep(time.Second * 20)
