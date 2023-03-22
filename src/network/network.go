@@ -25,7 +25,20 @@ type SyncMessage struct {
 type SyncState struct {
 	Floor     int
 	Direction elevio.MotorDirection
+	CabOrders map[string]([config.N_FLOORS]request.RequestState)
 	Requests  [config.N_FLOORS][config.N_BUTTONS]request.RequestState
+}
+
+func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState) {
+	retval := make(map[string]([config.N_FLOORS]request.RequestState))
+	for id, syncState := range networkRequests {
+		var relevant [config.N_FLOORS]request.RequestState
+		for floor := 0; floor < config.N_FLOORS; floor++ {
+			relevant[floor] = syncState.Requests[floor][elevio.BT_Cab]
+		}
+		retval[id] = relevant
+	}
+	return retval
 }
 
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
@@ -56,6 +69,7 @@ func InitSyncReciever() {
 	syncRxCh := make(chan SyncMessage)
 	go peers.Receiver(config.PEER_MANAGEMENT_PORT, peerUpdateCh)
 	go bcast.Receiver(config.BROADCAST_PORT, syncRxCh)
+	networkRequests := make(map[string](SyncState))
 	for {
 		select {
 		case p := <-peerUpdateCh:
@@ -64,7 +78,7 @@ func InitSyncReciever() {
 			}
 		case m := <-syncRxCh:
 			state, ok := networkRequests[m.ID]
-			if !ok || state != m.State {
+			if ok {
 				networkRequests[m.ID] = state
 			}
 		}
@@ -75,7 +89,8 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, requests *[con
 	syncTxCh := make(chan SyncMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
-		syncTxCh <- SyncMessage{GetID(), SyncState{*floor, *direction, *requests}}
+		var cabOrders = GetCabOrdersFromNetwork()
+		syncTxCh <- SyncMessage{localID, SyncState{*floor, *direction, cabOrders, *requests}}
 		time.Sleep(250 * time.Millisecond)
 	}
 }
