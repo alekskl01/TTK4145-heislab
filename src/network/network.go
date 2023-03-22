@@ -2,7 +2,6 @@ package network
 
 import (
 	"Elevator/config"
-	"Elevator/elevatorFSM"
 	"Elevator/elevio"
 	"Elevator/network/bcast"
 	"Elevator/network/localip"
@@ -29,7 +28,7 @@ type SyncState struct {
 	Requests  [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 }
 
-func GetRequestStatesAtIndex(floor int, button int) []request.RequestState {
+func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
 	var retval []request.RequestState
 	var requests = networkRequests
 
@@ -72,11 +71,11 @@ func InitSyncReciever() {
 	}
 }
 
-func BroadcastState(elev *elevatorFSM.Elevator) {
+func BroadcastState(floor *int, direction *elevio.MotorDirection, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	syncTxCh := make(chan SyncMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
-		syncTxCh <- SyncMessage{GetID(), SyncState{elev.Floor, elev.Direction, elev.Requests}}
+		syncTxCh <- SyncMessage{GetID(), SyncState{*floor, *direction, *requests}}
 		time.Sleep(250 * time.Millisecond)
 	}
 }

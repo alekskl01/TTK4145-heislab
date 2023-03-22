@@ -9,6 +9,6 @@ const (
 	DeleteRequest
 )
 
-func Ac(state RequestState) bool {
+func IsActive(state RequestState) bool {
 	return state == ActiveRequest
 }

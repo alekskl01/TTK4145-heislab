@@ -41,7 +41,7 @@ func InitializeElevator() Elevator {
 
 	//Make sure elevator is not between floors
 	elevator.Direction = elevio.MD_Down
-	elevio.SetMotorDirection(elevator.Direction)
+	elevio.SetMotorDirection(elevio.MD_Down)
 	elevator.State = Moving
 
 	return *elevator
@@ -65,7 +65,7 @@ func GoDown(elevator *Elevator) {
 func setButtonLights(elevator *Elevator) {
 	for f := 0; f < config.N_FLOORS; f++ {
 		for b := 0; b < config.N_BUTTONS; b++ {
-			if elevator.Requests[f][b] {
+			if request.IsActive(elevator.Requests[f][b]) {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, true)
 			} else {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, false)
