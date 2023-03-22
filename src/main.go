@@ -5,14 +5,10 @@ import (
 	"Elevator/elevatorFSM"
 	"Elevator/elevio"
 	"Elevator/network"
-
-	//"fmt"
 	"time"
 )
 
 func main() {
-
-	// Initiate Networking Channels
 
 	elevio.DefaultInit()
 	elevator := elevatorFSM.InitializeElevator()

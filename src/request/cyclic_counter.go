@@ -32,42 +32,41 @@ func OrderStatesEqualTo(checkState RequestState, myState RequestState, otherStat
 	return false
 }
 
-func cyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, order elevio.ButtonEvent, otherState []RequestState) {
-	floor := order.Floor
-	button_type := order.Button
+func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, floor int, button_type elevio.ButtonType, otherState []RequestState) RequestState {
 
 	myState := requests[floor][button_type]
 
 	switch myState {
 	case NoRequest:
 		if otherCountersAhead(PendingRequest, otherState) {
-			requests[floor][button_type] = PendingRequest
+			return PendingRequest
 		}
 
 	case PendingRequest:
 		if checkEqualityForArray(myState, otherState) {
-			requests[floor][button_type] = ActiveRequest
+			return ActiveRequest
 			// TODO: Turn on button light somewhere
 
 		} else if otherCountersAhead(ActiveRequest, otherState) {
-			requests[floor][button_type] = ActiveRequest
+			return ActiveRequest
 			// TODO: Turn on button light somewhere
 		}
 
 	case ActiveRequest:
 		if otherCountersAhead(DeleteRequest, otherState) {
-			requests[floor][button_type] = DeleteRequest
+			return DeleteRequest
 		}
 
 	case DeleteRequest:
 		if checkEqualityForArray(myState, otherState) {
-			requests[floor][button_type] = NoRequest
+			return NoRequest
 			// TODO: Turn off button light somewhere
 
 		} else if otherCountersAhead(ActiveRequest, otherState) {
-			requests[floor][button_type] = NoRequest
+			return NoRequest
 			// TODO: Turn off button light somewhere
 		}
 
 	}
+	return myState
 }
