@@ -5,6 +5,7 @@ Aleksander (the non shady one):
 Aleksander (the shady one):
   Do networking logic with order states and continous brodcasting, pass information from other elevators to calculate local order states.
   Function to return all active elevators, and to get list of orderstates for specific ordertype for all elevators.
+  Networking appears to not work.
  
  Elias (the one and only):
   Cost function for assigning orders using information about local elevator state and states of other elevators. 
