@@ -65,7 +65,7 @@ func GoDown(elevator *Elevator) {
 func setButtonLights(elevator *Elevator) {
 	for f := 0; f < config.N_FLOORS; f++ {
 		for b := 0; b < config.N_BUTTONS; b++ {
-			if request.IsActive(elevator.Requests[f][b]) {
+			if request.ShouldActivateButtonLight(elevator.Requests[f][b]) {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, true)
 			} else {
 				elevio.SetButtonLamp(elevio.ButtonType(b), f, false)

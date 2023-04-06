@@ -8,7 +8,7 @@ import (
 )
 
 func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonEvent, event_floorArrival <-chan int,
-	event_obstruction <-chan bool, event_stopButton <-chan bool, ch_elevatorUnavailable chan<- bool) {
+	event_obstruction <-chan bool, event_stopButton <-chan bool, ch_elevatorUnavailable chan<- bool, event_requestsUpdated <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 
 	for {
 		select {
@@ -132,6 +132,9 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 				elevio.SetMotorDirection(elevator.Direction)
 				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
+		case updated_requests := <-event_requestsUpdated:
+			elevator.Requests = updated_requests
+			setButtonLights(elevator)
 		}
 	}
 }

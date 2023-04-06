@@ -4,6 +4,7 @@ import (
 	"Elevator/config"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -37,6 +38,10 @@ type ButtonEvent struct {
 	Button ButtonType
 }
 
+func Log(text string) {
+	fmt.Println("Elevio: " + text)
+}
+
 // Initialize with default settings.
 func DefaultInit() {
 	Init("")
@@ -44,7 +49,7 @@ func DefaultInit() {
 
 func Init(addr string) {
 	if _initialized {
-		fmt.Println("Driver already initialized!")
+		Log("Driver already initialized, doing nothing")
 		return
 	}
 	if addr == "" {
@@ -91,6 +96,7 @@ func PollButtons(receiver chan<- ButtonEvent) {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v {
+					Log("Button type: " + strconv.Itoa(int(b)) + " for floor: " + strconv.Itoa(f) + " pressed")
 					receiver <- ButtonEvent{f, ButtonType(b)}
 				}
 				prev[f][b] = v
@@ -105,6 +111,7 @@ func PollFloorSensor(receiver chan<- int) {
 		time.Sleep(_pollRate)
 		v := GetFloor()
 		if v != prev && v != -1 {
+			Log("floor sensor triggered at floor: " + strconv.Itoa(v))
 			receiver <- v
 		}
 		prev = v
@@ -129,6 +136,7 @@ func PollObstructionSwitch(receiver chan<- bool) {
 		time.Sleep(_pollRate)
 		v := GetObstruction()
 		if v != prev {
+			Log("obstruction status changed to: " + strconv.FormatBool(v))
 			receiver <- v
 		}
 		prev = v

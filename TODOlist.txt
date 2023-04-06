@@ -10,3 +10,7 @@ Aleksander (the shady one):
   Cost function for assigning orders using information about local elevator state and states of other elevators. 
   Kun hall orders blir bestemt behandlet, mens cab orders må ta del i beregningen.
   
+Someone (pls just anybody):
+Bugs
+Waits about 6 seconds when an order is recieved in idle mode.
+Crashes when arriving at floor with multiple orders and has another order to deal with.
