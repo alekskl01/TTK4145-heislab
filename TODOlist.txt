@@ -1,6 +1,6 @@
 Aleksander (the non shady one):
   Cyclic order counter logic, fix state machine.
-    initialize properly when reconnecting
+    initialize properly when reconnecting (refuse to take hallorders if not connected to network)
 
 Aleksander (the shady one):
   Do networking logic with order states and continous brodcasting, pass information from other elevators to calculate local order states.
