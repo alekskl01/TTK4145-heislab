@@ -6,17 +6,14 @@ import (
 	"Elevator/network"
 	"Elevator/request"
 	"fmt"
-	"strconv"
 )
 
 func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonEvent, event_floorArrival <-chan int,
 	event_obstruction <-chan bool, event_stopButton <-chan bool, ch_elevatorUnavailable chan<- bool, event_requestsUpdated <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 
 	for {
-		Log(strconv.Itoa(int(elevator.State)))
 		select {
 		case order := <-event_buttonPress:
-			Log("Order")
 			floor := order.Floor
 			button_type := order.Button
 			var otherStates = network.GetRequestStatesAtIndex(floor, button_type)
@@ -63,16 +60,11 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
 						elevator.Requests[floor][button_type] = request.PendingRequest
 					}
-					elevator.Direction = chooseDirection(elevator)
-					elevio.SetMotorDirection(elevator.Direction)
-					elevator.State = Moving
-					elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 				}
 			}
 			setButtonLights(elevator)
 
 		case newFloor := <-event_floorArrival:
-			Log("New floor")
 			elevator.Floor = newFloor
 
 			elevio.SetFloorIndicator(newFloor)
@@ -81,9 +73,9 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 			case Moving:
 				if shouldStop(elevator) {
 					elevio.SetMotorDirection(elevio.MD_Stop)
+					elevator.MotorStopTimer.Stop()
 
 					clearRequestAtFloor(elevator)
-					elevator.MotorStopTimer.Stop()
 
 					doorOpenTimer(elevator)
 					setButtonLights(elevator)
@@ -95,7 +87,6 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 
 			case MotorStop:
 				elevator.MotorStopTimer.Stop()
-				Log("Case: Motor Stop")
 
 				if shouldStop(elevator) {
 					elevio.SetMotorDirection(elevio.MD_Stop)
@@ -114,7 +105,6 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 			}
 
 		case obstruction := <-event_obstruction:
-			Log("Obstruction")
 			elevator.Obstruction = obstruction
 
 			if elevator.State == DoorOpen {
@@ -155,6 +145,14 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 			Log("Updated Requests")
 			elevator.Requests = updated_requests
 			setButtonLights(elevator)
+
+			// Must be here to be able to confirm a new request before moving the elevator (When in idle mode), because it wil choose direction stop if not
+			if elevator.State == Idle {
+				elevator.Direction = chooseDirection(elevator)
+				elevio.SetMotorDirection(elevator.Direction)
+				elevator.State = Moving
+				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
+			}
 		}
 	}
 }
