@@ -14,7 +14,7 @@ const LOW_COST int = N_FLOORS * -100
 const MAJOR_COST int = N_FLOORS * 5
 
 const DOOR_OPEN_DURATION = time.Millisecond * 3000
-const MOTOR_STOP_DETECTION_TIME = time.Millisecond * 3000
+const MOTOR_STOP_DETECTION_TIME = time.Millisecond * 4000
 
 const FSM_CHANNEL_BUFFER_SIZE = 10
 

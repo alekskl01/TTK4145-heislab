@@ -4,6 +4,7 @@ import (
 	"Elevator/config"
 	"Elevator/elevio"
 	"Elevator/request"
+	"fmt"
 	"time"
 )
 
@@ -16,14 +17,38 @@ const (
 	MotorStop ElevatorState = 3
 )
 
+type CheckableTimer struct {
+	timer *time.Timer
+	end   time.Time
+}
+
+func NewCheckableTimer(t time.Duration) *CheckableTimer {
+	return &CheckableTimer{time.NewTimer(t), time.Now().Add(t)}
+}
+
+func (checkable_timer *CheckableTimer) Reset(t time.Duration) {
+	checkable_timer.timer.Reset(t)
+	checkable_timer.end = time.Now().Add(t)
+}
+
+func (checkable_timer *CheckableTimer) Stop() {
+	checkable_timer.timer.Stop()
+}
+
+func (checkable_timer *CheckableTimer) hasTimeRemaining() bool {
+	time_left := time.Until(checkable_timer.end)
+	fmt.Println(time_left)
+	return (time_left > 0)
+}
+
 type Elevator struct {
 	State          ElevatorState
 	Floor          int
 	Direction      elevio.MotorDirection
 	Requests       [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 	Obstruction    bool
-	DoorTimer      *time.Timer
-	MotorStopTimer *time.Timer
+	DoorTimer      CheckableTimer
+	MotorStopTimer CheckableTimer
 }
 
 func InitializeElevator() Elevator {
@@ -34,9 +59,9 @@ func InitializeElevator() Elevator {
 	elevator.Obstruction = false
 
 	//Timers
-	elevator.DoorTimer = time.NewTimer(config.DOOR_OPEN_DURATION)
+	elevator.DoorTimer = *NewCheckableTimer(config.DOOR_OPEN_DURATION)
 	elevator.DoorTimer.Stop()
-	elevator.MotorStopTimer = time.NewTimer(config.MOTOR_STOP_DETECTION_TIME)
+	elevator.MotorStopTimer = *NewCheckableTimer(config.MOTOR_STOP_DETECTION_TIME)
 	elevator.MotorStopTimer.Stop()
 
 	//Make sure elevator is not between floors
