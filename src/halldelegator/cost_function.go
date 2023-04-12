@@ -5,7 +5,6 @@ import (
 	"Elevator/elevio"
 	"Elevator/request"
 	"fmt"
-	"math"
 )
 
 func log(text string) {
@@ -51,7 +50,7 @@ func GetCostOfHallOrder(hall_floor int, button_type elevio.ButtonType, floor int
 		return cost
 	}
 
-	cost = cost + hall_distance	
+	cost = cost + hall_distance
 	for request_floor := 0; request_floor < config.N_FLOORS; request_floor++ {
 		floor_distance, floor_dir := getCostBetweenFloors(floor, request_floor)
 		// Any active request in the direction we need to go means less cost while
@@ -68,9 +67,9 @@ func GetCostOfHallOrder(hall_floor int, button_type elevio.ButtonType, floor int
 		}
 	}
 
-	// Add or subtract 2 since that is the number of floor changes needed to 
+	// Add or subtract 2 since that is the number of floor changes needed to
 	// be at the same floor with the opposite direction.
-	if (direction == hall_dir) {
+	if direction == hall_dir {
 		cost = cost - 2
 	} else {
 		cost = cost + 2

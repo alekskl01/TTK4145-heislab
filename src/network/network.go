@@ -8,11 +8,15 @@ import (
 	"Elevator/network/peers"
 	"Elevator/request"
 	"fmt"
+	"os"
+	"sync"
 	"time"
 )
 
 // States of all other elevators
-var GlobalElevatorStates map[string](ElevatorState)
+var GlobalElevatorStates sync.Map
+
+// Potentially includes ourself
 var ConnectedNodes []string
 
 // Only needs to be determined once on startup
@@ -31,14 +35,43 @@ type ElevatorState struct {
 	LocalRequests   [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 }
 
+func GetOtherConnectedNodes() []string {
+	var retval []string
+	var allNodes = ConnectedNodes
+	for _, node := range allNodes {
+		if node != LocalID {
+			retval = append(retval, node)
+		}
+	}
+	return retval
+}
+
+func CheckIfNodeIsConnected(id string) bool {
+	// Our local node is always connected to itself
+	if id == LocalID {
+		return true
+	}
+	var nodes = ConnectedNodes
+	for _, node := range nodes {
+		if node == id {
+			return true
+		}
+	}
+	return false
+}
+
 func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState) {
 	retval := make(map[string]([config.N_FLOORS]request.RequestState))
-	for id, syncState := range GlobalElevatorStates {
-		var relevant [config.N_FLOORS]request.RequestState
-		for floor := 0; floor < config.N_FLOORS; floor++ {
-			relevant[floor] = syncState.LocalRequests[floor][elevio.BT_Cab]
+
+	for _, node := range GetOtherConnectedNodes() {
+		state, ok := GlobalElevatorStates.Load(node)
+		if ok {
+			var relevant [config.N_FLOORS]request.RequestState
+			for floor := 0; floor < config.N_FLOORS; floor++ {
+				relevant[floor] = state.(ElevatorState).LocalRequests[floor][elevio.BT_Cab]
+			}
+			retval[node] = relevant
 		}
-		retval[id] = relevant
 	}
 	return retval
 }
@@ -46,15 +79,17 @@ func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState
 // From other elevators, gets hall request states for a relevant hall button or local version of our cab requests for cab button.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
 	var retval []request.RequestState
-	var states = GlobalElevatorStates
 
-	for _, nodeRequests := range states {
-		if button == elevio.BT_Cab {
-			var state = nodeRequests.GlobalCabOrders[LocalID][floor]
-			retval = append(retval, state)
-		} else {
-			var state = nodeRequests.LocalRequests[floor][button]
-			retval = append(retval, state)
+	for _, node := range GetOtherConnectedNodes() {
+		totalState, ok := GlobalElevatorStates.Load(node)
+		if ok {
+			if button == elevio.BT_Cab {
+				var state = totalState.(ElevatorState).GlobalCabOrders[LocalID][floor]
+				retval = append(retval, state)
+			} else {
+				var state = totalState.(ElevatorState).LocalRequests[floor][button]
+				retval = append(retval, state)
+			}
 		}
 	}
 	return retval
@@ -67,12 +102,14 @@ func GetID() string {
 		fmt.Println(err)
 		localIP = "DISCONNECTED"
 	}
+	localIP = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
 	return localIP
 }
 
-func InitSyncReciever() {
+func InitSyncReciever(peerTxEnable <-chan bool) {
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
+	go peers.Transmitter(config.PEER_MANAGEMENT_PORT, LocalID, peerTxEnable)
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	syncRxCh := make(chan ElevatorStateMessage)
 	go peers.Receiver(config.PEER_MANAGEMENT_PORT, peerUpdateCh)
@@ -80,20 +117,13 @@ func InitSyncReciever() {
 	for {
 		select {
 		case p := <-peerUpdateCh:
-			if p.New != "" || len(p.Lost) > 0 {
-				ConnectedNodes = p.Peers
-			}
+			ConnectedNodes = p.Peers
 		case m := <-syncRxCh:
-			state, ok := GlobalElevatorStates[m.ID]
-			if ok {
-				GlobalElevatorStates[m.ID] = state
-				fmt.Println("ID: " + m.ID)
-				fmt.Printf("%#v", state)
-				fmt.Println("")
+			if m.ID != LocalID { // We are not interested in our own state
+				GlobalElevatorStates.Store(m.ID, m.State)
 			}
 		}
 	}
-
 }
 
 func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
@@ -104,4 +134,28 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 		syncTxCh <- ElevatorStateMessage{LocalID, ElevatorState{*floor, *direction, *is_obstructed, cabOrders, *requests}}
 		time.Sleep(250 * time.Millisecond)
 	}
+}
+
+func NetworkCheck() {
+	for {
+		fmt.Println("-----------------------------")
+		fmt.Println("Network states:")
+		PrintSyncMap(GlobalElevatorStates)
+		fmt.Println("Connected nodes:")
+		fmt.Printf("%#v", GetOtherConnectedNodes())
+		fmt.Println()
+		fmt.Println("-----------------------------")
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func PrintSyncMap(m sync.Map) {
+	// print map,
+	fmt.Println("map content:")
+	i := 0
+	m.Range(func(key, value interface{}) bool {
+		fmt.Printf("\t[%d] key: %v, value: %v\n", i, key, value)
+		i++
+		return true
+	})
 }

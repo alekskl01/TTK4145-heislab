@@ -21,16 +21,17 @@ func main() {
 	drv_stop := make(chan bool)
 	FSM_ElevatorUnavailable := make(chan bool, config.FSM_CHANNEL_BUFFER_SIZE)
 	requestsUpdate := make(chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState)
+	peerTxEnable := make(chan bool)
 
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	//go synchronizer.GlobalRequestSynchronization()
+	go network.NetworkCheck()
+	go network.InitSyncReciever(peerTxEnable)
 	go synchronizer.LocalRequestSynchronization(&elevator, requestsUpdate)
 	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.Obstruction, &elevator.Requests)
-	go network.InitSyncReciever()
 	go elevatorFSM.RunStateMachine(&elevator, drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, requestsUpdate)
 	for {
 		time.Sleep(time.Second * 20)
