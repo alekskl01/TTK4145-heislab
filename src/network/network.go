@@ -26,6 +26,7 @@ type ElevatorStateMessage struct {
 type ElevatorState struct {
 	Floor           int
 	Direction       elevio.MotorDirection
+	IsObstructed    bool
 	GlobalCabOrders map[string]([config.N_FLOORS]request.RequestState)
 	LocalRequests   [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 }
@@ -95,12 +96,12 @@ func InitSyncReciever() {
 
 }
 
-func BroadcastState(floor *int, direction *elevio.MotorDirection, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	syncTxCh := make(chan ElevatorStateMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
 		var cabOrders = GetCabOrdersFromNetwork()
-		syncTxCh <- ElevatorStateMessage{LocalID, ElevatorState{*floor, *direction, cabOrders, *requests}}
+		syncTxCh <- ElevatorStateMessage{LocalID, ElevatorState{*floor, *direction, *is_obstructed, cabOrders, *requests}}
 		time.Sleep(250 * time.Millisecond)
 	}
 }

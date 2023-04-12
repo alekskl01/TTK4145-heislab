@@ -29,7 +29,7 @@ func main() {
 
 	//go synchronizer.GlobalRequestSynchronization()
 	go synchronizer.LocalRequestSynchronization(&elevator, requestsUpdate)
-	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.Requests)
+	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.Obstruction, &elevator.Requests)
 	go network.InitSyncReciever()
 	go elevatorFSM.RunStateMachine(&elevator, drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, requestsUpdate)
 	for {
