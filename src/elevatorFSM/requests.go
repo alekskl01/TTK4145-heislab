@@ -79,27 +79,34 @@ func shouldStop(elev *Elevator) bool {
 }
 
 func clearRequestAtFloor(elev *Elevator) {
-
-	nextDirection := chooseDirection(elev)
 	var servicedHallRequest elevio.ButtonType
 
-	switch nextDirection {
-	case elevio.MD_Stop:
-		fallthrough
+	if request.IsActive(elev.Requests[elev.Floor][elevio.BT_HallDown]) &&
+		request.IsActive(elev.Requests[elev.Floor][elevio.BT_HallUp]) {
 
-	case elevio.MD_Up:
-		servicedHallRequest = elevio.BT_HallUp
+		switch elev.Direction {
+		case elevio.MD_Stop:
+			fallthrough
 
-	case elevio.MD_Down:
+		case elevio.MD_Up:
+			servicedHallRequest = elevio.BT_HallUp
+
+		case elevio.MD_Down:
+			servicedHallRequest = elevio.BT_HallDown
+		}
+	} else if request.IsActive(elev.Requests[elev.Floor][elevio.BT_HallDown]) {
 		servicedHallRequest = elevio.BT_HallDown
+	} else if request.IsActive(elev.Requests[elev.Floor][elevio.BT_HallUp]) {
+		servicedHallRequest = elevio.BT_HallUp
 	}
 
-	var otherStates = network.GetRequestStatesAtIndex(elev.Floor, elevio.BT_Cab)
 	//TODO: improve code quality
+	var otherStates = network.GetRequestStatesAtIndex(elev.Floor, elevio.BT_Cab)
 	if request.OrderStatesEqualTo(request.ActiveRequest, elev.Requests[elev.Floor][elevio.BT_Cab], otherStates) {
 		elev.Requests[elev.Floor][elevio.BT_Cab] = request.DeleteRequest
 	}
 	elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), elev.Floor, false)
+
 	otherStates = network.GetRequestStatesAtIndex(elev.Floor, servicedHallRequest)
 	if request.OrderStatesEqualTo(request.ActiveRequest, elev.Requests[elev.Floor][servicedHallRequest], otherStates) {
 		elev.Requests[elev.Floor][servicedHallRequest] = request.DeleteRequest

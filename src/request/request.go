@@ -15,5 +15,5 @@ func IsActive(state RequestState) bool {
 
 // Used to determine whether the light for a request should be on
 func ShouldActivateButtonLight(state RequestState) bool {
-	return state == ActiveRequest || state == DeleteRequest
+	return (state == ActiveRequest || state == DeleteRequest)
 }
