@@ -19,6 +19,8 @@ var GlobalElevatorStates sync.Map
 // Potentially includes ourself
 var ConnectedNodes []string
 
+var LastRequestUpdateTime time.Time
+
 // Only needs to be determined once on startup
 var LocalID = GetID()
 
@@ -28,11 +30,12 @@ type ElevatorStateMessage struct {
 }
 
 type ElevatorState struct {
-	Floor           int
-	Direction       elevio.MotorDirection
-	IsObstructed    bool
-	GlobalCabOrders map[string]([config.N_FLOORS]request.RequestState)
-	LocalRequests   [config.N_FLOORS][config.N_BUTTONS]request.RequestState
+	Floor             int
+	Direction         elevio.MotorDirection
+	IsObstructed      bool
+	GlobalCabOrders   map[string]([config.N_FLOORS]request.RequestState)
+	RequestUpdateTime time.Time
+	LocalRequests     [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 }
 
 func GetOtherConnectedNodes() []string {
@@ -98,6 +101,19 @@ func GetUnionOfLocalCabOrdersFromNetwork() []request.RequestState {
 	return retval
 }
 
+func GetNewestLocalOrdersFromNetwork() [config.N_FLOORS][config.N_BUTTONS]request.RequestState {
+	var nodes = GetOtherConnectedNodes()
+	var newestTime = time.Time{}
+	var newestState ElevatorState
+	for _, node := range nodes {
+		state, ok := GlobalElevatorStates.Load(node)
+		if ok && (state.(ElevatorState)).RequestUpdateTime.After(newestTime) {
+			newestState = state.(ElevatorState)
+		}
+	}
+	return newestState.LocalRequests
+}
+
 // From other elevators, gets hall request states for a relevant hall button or local version of our cab requests for cab button.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
 	var retval []request.RequestState
@@ -129,6 +145,7 @@ func GetID() string {
 }
 
 func InitSyncReciever(peerTxEnable <-chan bool) {
+	LastRequestUpdateTime = time.Now()
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
 	go peers.Transmitter(config.PEER_MANAGEMENT_PORT, LocalID, peerTxEnable)
@@ -142,6 +159,7 @@ func InitSyncReciever(peerTxEnable <-chan bool) {
 			ConnectedNodes = p.Peers
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
+				LastRequestUpdateTime = time.Now()
 				GlobalElevatorStates.Store(m.ID, m.State)
 			}
 		}
@@ -153,7 +171,7 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
 		var cabOrders = GetCabOrdersFromNetwork()
-		syncTxCh <- ElevatorStateMessage{LocalID, ElevatorState{*floor, *direction, *is_obstructed, cabOrders, *requests}}
+		syncTxCh <- ElevatorStateMessage{LocalID, ElevatorState{*floor, *direction, *is_obstructed, cabOrders, LastRequestUpdateTime, *requests}}
 		time.Sleep(250 * time.Millisecond)
 	}
 }
