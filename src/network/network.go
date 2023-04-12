@@ -76,6 +76,28 @@ func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState
 	return retval
 }
 
+func GetUnionOfLocalCabOrdersFromNetwork() []request.RequestState {
+	retval := make(([]request.RequestState), config.N_FLOORS)
+	for i := range retval {
+		retval[i] = 0
+	}
+	for _, node := range GetOtherConnectedNodes() {
+		state, ok1 := GlobalElevatorStates.Load(node)
+		if ok1 {
+			cab_orders, ok2 := state.(ElevatorState).GlobalCabOrders[LocalID]
+			if ok2 {
+				// Get the union of highest values for each request state
+				for i, union_val := range retval {
+					if cab_orders[i] > union_val {
+						retval[i] = cab_orders[i]
+					}
+				}
+			}
+		}
+	}
+	return retval
+}
+
 // From other elevators, gets hall request states for a relevant hall button or local version of our cab requests for cab button.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
 	var retval []request.RequestState
