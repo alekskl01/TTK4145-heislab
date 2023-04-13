@@ -17,6 +17,11 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 			floor := order.Floor
 			button_type := order.Button
 			var otherStates = network.GetRequestStatesAtIndex(floor, button_type)
+
+			if len(otherStates) == 0 && button_type != elevio.BT_Cab {
+				break
+			}
+			
 			switch elevator.State {
 			case DoorOpen:
 				if elevator.Floor == floor {

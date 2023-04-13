@@ -28,10 +28,10 @@ func main() {
 	go network.InitSyncReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
 	// Ensure we have more than enough time to get requests from network
 	time.Sleep(1 * time.Second)
-	var cabOrders = network.GetUnionOfLocalCabOrdersFromNetwork()
+	var cabOrders = network.GetLocalCabOrdersFromNetwork()
 	// Keep in mind this also includes cab orders from another elevator,
 	// to simplify data restructuring.
- 	hallOrders, _ := network.GetNewestLocalOrdersFromNetwork()
+ 	hallOrders, _ := network.GetNewestOrdersFromNetwork()
 	for floor := 0; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
 			if button == elevio.BT_Cab {

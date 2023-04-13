@@ -79,7 +79,7 @@ func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState
 	return retval
 }
 
-func GetUnionOfLocalCabOrdersFromNetwork() []request.RequestState {
+func GetLocalCabOrdersFromNetwork() []request.RequestState {
 	retval := make(([]request.RequestState), config.N_FLOORS)
 	for i := range retval {
 		retval[i] = 0
@@ -101,7 +101,7 @@ func GetUnionOfLocalCabOrdersFromNetwork() []request.RequestState {
 	return retval
 }
 
-func GetNewestLocalOrdersFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, time.Time) {
+func GetNewestOrdersFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, time.Time) {
 	var nodes = GetOtherConnectedNodes()
 	var newestTime = time.Time{}
 	var newestState ElevatorState
@@ -158,7 +158,7 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 		case p := <-peerUpdateCh:
 			ConnectedNodes = p.Peers
 			if p.New != "" {
-				hallOrders, newestTime := GetNewestLocalOrdersFromNetwork()
+				hallOrders, newestTime := GetNewestOrdersFromNetwork()
 				if newestTime.After(LastRequestUpdateTime) {
 					var newRequests = *requests
 					for floor := 0; floor < config.N_FLOORS; floor++ {
