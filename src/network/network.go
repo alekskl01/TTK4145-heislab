@@ -2,6 +2,7 @@ package network
 
 import (
 	"Elevator/config"
+	"Elevator/costcalculator"
 	"Elevator/elevio"
 	"Elevator/network/bcast"
 	"Elevator/network/localip"
@@ -61,6 +62,24 @@ func CheckIfNodeIsConnected(id string) bool {
 		}
 	}
 	return false
+}
+
+func IsHallOrderCheapest(hall_floor int, button_type elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
+	 is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
+	cheapest_cost := config.HIGH_COST
+	for _, node := range GetOtherConnectedNodes() {
+		state, ok := GlobalElevatorStates.Load(node)
+		if ok {
+			sync_state := state.(SyncState)
+			cost := costcalculator.GetCostOfHallOrder(hall_floor, button_type, sync_state.Floor, sync_state.Direction, sync_state.IsObstructed, sync_state.LocalRequests)
+			if (cost < cheapest_cost) {
+				cheapest_cost = cost
+			}
+		}
+	}
+
+	our_cost := costcalculator.GetCostOfHallOrder(hall_floor, button_type, *floor, *direction, *is_obstructed, *requests)
+	return our_cost <= cheapest_cost
 }
 
 func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState) {

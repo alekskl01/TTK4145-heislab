@@ -1,4 +1,4 @@
-package halldelegator
+package costcalculator
 
 import (
 	"Elevator/config"
@@ -8,7 +8,7 @@ import (
 )
 
 func log(text string) {
-	fmt.Println("Hall Delegator: " + text)
+	fmt.Println("Cost Function: " + text)
 }
 
 func getCostBetweenFloors(current_floor int, floor int) (int, elevio.MotorDirection) {
