@@ -35,11 +35,7 @@ func OrderStatesEqualTo(checkState RequestState, myState RequestState, otherStat
 func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, floor int, button_type elevio.ButtonType, otherState []RequestState) RequestState {
 
 	myState := requests[floor][button_type]
-
-	if len(otherState) == 0 {
-		return myState
-	}
-
+	
 	switch myState {
 	case NoRequest:
 		if otherCountersAhead(PendingRequest, otherState) {

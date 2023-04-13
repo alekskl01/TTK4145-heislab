@@ -24,7 +24,7 @@ func main() {
 	peerTxEnable := make(chan bool)
 
 	// Initialize with requests from network (if any)
-	go network.NetworkCheck()
+	go network.NetworkCheck(&elevator.Requests)
 	go network.InitSyncReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
 	// Ensure we have more than enough time to get requests from network
 	time.Sleep(1 * time.Second)
