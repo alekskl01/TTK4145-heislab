@@ -188,13 +188,17 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 	}
 }
 
-func NetworkCheck() {
+func NetworkCheck(requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	for {
 		fmt.Println("-----------------------------")
 		fmt.Println("Network states:")
 		PrintSyncMap(GlobalElevatorStates)
 		fmt.Println("Connected nodes:")
 		fmt.Printf("%#v", GetOtherConnectedNodes())
+		fmt.Println()
+		fmt.Println("-----------------------------")
+		fmt.Println("Request matrix:")
+		fmt.Printf("%#v", requests)
 		fmt.Println()
 		fmt.Println("-----------------------------")
 		time.Sleep(5 * time.Second)
