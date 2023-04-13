@@ -4,7 +4,7 @@ import "time"
 
 const N_FLOORS int = 4
 const N_BUTTONS int = 3
-const ADDR string = "localhost:12345"
+const ADDR string = "localhost:12345"  //15657
 
 // For a reasonable number of floors,
 // these values should be the highest and lowest values

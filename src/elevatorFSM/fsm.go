@@ -170,7 +170,9 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				} else {
-					Log("Could not delete order")
+					Log("Could not delete order 1")
+					fmt.Printf("%#v", otherStates)
+					fmt.Println()
 				}
 				doorOpenTimer(elevator)
 				setButtonLights(elevator)
@@ -181,7 +183,9 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				} else {
-					Log("Could not delete order")
+					Log("Could not delete order 2")
+					fmt.Printf("%#v", otherStates)
+					fmt.Println()
 				}
 			}
 		} else if request.IsActive(elevator.Requests[elevator.Floor][elevio.BT_HallUp]) {
@@ -190,7 +194,9 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				} else {
-					Log("Could not delete order")
+					Log("Could not delete order 3")
+					fmt.Printf("%#v", otherStates)
+					fmt.Println()
 				}
 				doorOpenTimer(elevator)
 				setButtonLights(elevator)
@@ -201,7 +207,9 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				} else {
-					Log("Could not delete order")
+					Log("Could not delete order 4")
+					fmt.Printf("%#v", otherStates)
+					fmt.Println()
 				}
 			}
 		}

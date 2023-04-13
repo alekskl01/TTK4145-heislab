@@ -36,6 +36,10 @@ func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, flo
 
 	myState := requests[floor][button_type]
 
+	if len(otherState) == 0 {
+		return myState
+	}
+
 	switch myState {
 	case NoRequest:
 		if otherCountersAhead(PendingRequest, otherState) {
@@ -62,7 +66,7 @@ func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, flo
 			return NoRequest
 			// TODO: Turn off button light somewhere
 
-		} else if otherCountersAhead(ActiveRequest, otherState) {
+		} else if otherCountersAhead(NoRequest, otherState) {
 			return NoRequest
 			// TODO: Turn off button light somewhere
 		}
