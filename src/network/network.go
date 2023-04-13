@@ -141,7 +141,8 @@ func GetID() string {
 		localIP = "DISCONNECTED"
 	}
 	localIP = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	return localIP
+	port := config.ADDR
+	return port
 }
 
 func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {

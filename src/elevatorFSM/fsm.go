@@ -18,7 +18,8 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 			button_type := order.Button
 			var otherStates = network.GetRequestStatesAtIndex(floor, button_type)
 
-			if len(otherStates) == 0 && button_type != elevio.BT_Cab {
+			// Prevents taking hall orders if we are not connected to the network
+			if len(otherStates) == 0 && button_type != elevio.BT_Cab { 
 				break
 			}
 			
