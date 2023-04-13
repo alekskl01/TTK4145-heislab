@@ -8,6 +8,20 @@ import (
 	"fmt"
 )
 
+var CheapestRequests [config.N_FLOORS][config.N_BUTTONS]bool
+
+func InitCheapestRequests() {
+	cheapestRequests := make([][]bool, config.N_FLOORS)
+	for i := range cheapestRequests {
+		cheapestRequests[i] = make([]bool, config.N_BUTTONS)
+	}
+
+	// Cab orders are always cheapest for us to take
+	for floor := 0; floor < config.N_FLOORS; floor++ {
+		cheapestRequests[floor][0] = true
+	}
+}
+
 func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonEvent, event_floorArrival <-chan int,
 	event_obstruction <-chan bool, event_stopButton <-chan bool, ch_elevatorUnavailable chan<- bool, event_requestsUpdated <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 

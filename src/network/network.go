@@ -66,6 +66,9 @@ func CheckIfNodeIsConnected(id string) bool {
 
 func IsHallOrderCheapest(hall_floor int, button_type elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
 	 is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
+	if (len(GetOtherConnectedNodes()) == 0) {
+		return true
+	}
 	cheapest_cost := config.HIGH_COST
 	for _, node := range GetOtherConnectedNodes() {
 		state, ok := GlobalElevatorStates.Load(node)
