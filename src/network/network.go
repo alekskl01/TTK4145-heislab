@@ -144,7 +144,7 @@ func GetID() string {
 	return localIP
 }
 
-func InitSyncReciever(peerTxEnable <-chan bool) {
+func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	LastRequestUpdateTime = time.Now()
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
@@ -157,6 +157,16 @@ func InitSyncReciever(peerTxEnable <-chan bool) {
 		select {
 		case p := <-peerUpdateCh:
 			ConnectedNodes = p.Peers
+			if p.New != "" {
+				var hallOrders = GetNewestLocalOrdersFromNetwork()
+				var newRequests = *requests
+				for floor := 0; floor < config.N_FLOORS; floor++ {
+					for button := 1; button < config.N_BUTTONS; button++ {
+						newRequests[floor][button] = hallOrders[floor][button]
+					}
+				}
+				requestsUpdate <- newRequests
+			}
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
 				LastRequestUpdateTime = time.Now()

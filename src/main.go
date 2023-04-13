@@ -25,7 +25,7 @@ func main() {
 
 	// Initialize with requests from network (if any)
 	go network.NetworkCheck()
-	go network.InitSyncReciever(peerTxEnable)
+	go network.InitSyncReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
 	// Ensure we have more than enough time to get requests from network
 	time.Sleep(1 * time.Second)
 	var cabOrders = network.GetUnionOfLocalCabOrdersFromNetwork()
@@ -41,6 +41,7 @@ func main() {
 			}
 		}
 	}
+	
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
