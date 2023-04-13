@@ -31,7 +31,7 @@ func main() {
 	var cabOrders = network.GetUnionOfLocalCabOrdersFromNetwork()
 	// Keep in mind this also includes cab orders from another elevator,
 	// to simplify data restructuring.
-	var hallOrders = network.GetNewestLocalOrdersFromNetwork()
+ 	hallOrders, _ := network.GetNewestLocalOrdersFromNetwork()
 	for floor := 0; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
 			if button == elevio.BT_Cab {

@@ -101,7 +101,7 @@ func GetUnionOfLocalCabOrdersFromNetwork() []request.RequestState {
 	return retval
 }
 
-func GetNewestLocalOrdersFromNetwork() [config.N_FLOORS][config.N_BUTTONS]request.RequestState {
+func GetNewestLocalOrdersFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, time.Time) {
 	var nodes = GetOtherConnectedNodes()
 	var newestTime = time.Time{}
 	var newestState ElevatorState
@@ -111,7 +111,7 @@ func GetNewestLocalOrdersFromNetwork() [config.N_FLOORS][config.N_BUTTONS]reques
 			newestState = state.(ElevatorState)
 		}
 	}
-	return newestState.LocalRequests
+	return newestState.LocalRequests, newestTime
 }
 
 // From other elevators, gets hall request states for a relevant hall button or local version of our cab requests for cab button.
@@ -158,14 +158,16 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 		case p := <-peerUpdateCh:
 			ConnectedNodes = p.Peers
 			if p.New != "" {
-				var hallOrders = GetNewestLocalOrdersFromNetwork()
-				var newRequests = *requests
-				for floor := 0; floor < config.N_FLOORS; floor++ {
-					for button := 1; button < config.N_BUTTONS; button++ {
-						newRequests[floor][button] = hallOrders[floor][button]
+				hallOrders, newestTime := GetNewestLocalOrdersFromNetwork()
+				if newestTime.After(LastRequestUpdateTime) {
+					var newRequests = *requests
+					for floor := 0; floor < config.N_FLOORS; floor++ {
+						for button := 1; button < config.N_BUTTONS; button++ {
+							newRequests[floor][button] = hallOrders[floor][button]
+						}
 					}
+					requestsUpdate <- newRequests
 				}
-				requestsUpdate <- newRequests
 			}
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
