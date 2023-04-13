@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// Determines how often system values are refreshed and or updated.
+const UPDATE_DELAY = time.Millisecond * 250
+
 const N_FLOORS int = 4
 const N_BUTTONS int = 3
 

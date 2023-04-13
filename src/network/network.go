@@ -206,7 +206,7 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 	for {
 		var cabOrders = GetCabOrdersFromNetwork()
 		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, cabOrders, LastRequestUpdateTime, *requests}}
-		time.Sleep(250 * time.Millisecond)
+		time.Sleep(config.UPDATE_DELAY)
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 func existsRequestsAbove(elev *Elevator) bool {
 	for floor := elev.Floor + 1; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			if request.IsActive(elev.Requests[floor][button]) {
+			if request.IsActive(elev.Requests[floor][button]) && CheapestRequests[floor][button] {
 				return true
 			}
 		}
@@ -21,7 +21,7 @@ func existsRequestsAbove(elev *Elevator) bool {
 func existsRequestsBelow(elev *Elevator) bool {
 	for floor := 0; floor < elev.Floor; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			if request.IsActive(elev.Requests[floor][button]) {
+			if request.IsActive(elev.Requests[floor][button]) && CheapestRequests[floor][button] {
 				return true
 			}
 		}

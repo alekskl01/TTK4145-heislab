@@ -10,15 +10,10 @@ import (
 
 var CheapestRequests [config.N_FLOORS][config.N_BUTTONS]bool
 
-func InitCheapestRequests() {
-	cheapestRequests := make([][]bool, config.N_FLOORS)
-	for i := range cheapestRequests {
-		cheapestRequests[i] = make([]bool, config.N_BUTTONS)
-	}
-
+func InitCheapestRequests() {	
 	// Cab orders are always cheapest for us to take
 	for floor := 0; floor < config.N_FLOORS; floor++ {
-		cheapestRequests[floor][0] = true
+		CheapestRequests[floor][config.N_BUTTONS - 1] = true
 	}
 }
 

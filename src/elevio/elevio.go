@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-var _addr string = config.GetAddress()
 
 const _pollRate = 20 * time.Millisecond
 
@@ -42,19 +41,12 @@ func log(text string) {
 	fmt.Println("Elevio: " + text)
 }
 
-// Initialize with default settings.
-func DefaultInit() {
-	Init("")
-}
-
-func Init(addr string) {
+func Init() {
 	if _initialized {
 		log("Driver already initialized, doing nothing")
 		return
 	}
-	if addr == "" {
-		addr = _addr
-	}
+	addr := config.GetAddress()
 	_mtx = sync.Mutex{}
 	var err error
 	_conn, err = net.Dial("tcp", addr)
