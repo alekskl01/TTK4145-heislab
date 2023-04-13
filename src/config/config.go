@@ -1,10 +1,12 @@
 package config
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 const N_FLOORS int = 4
 const N_BUTTONS int = 3
-const ADDR string = "localhost:11111"  //15657
 
 // For a reasonable number of floors,
 // these values should be the highest and lowest values
@@ -20,3 +22,12 @@ const FSM_CHANNEL_BUFFER_SIZE = 10
 
 const PEER_MANAGEMENT_PORT = 27182
 const BROADCAST_PORT = 27183
+
+const DEFAULT_PORT = 15657
+
+const IP = "localhost"  //15657
+var Port = DEFAULT_PORT
+
+func GetAddress() string {
+	return IP + ":" + strconv.Itoa(Port)
+}

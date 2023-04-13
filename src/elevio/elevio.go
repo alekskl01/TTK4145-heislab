@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-var _addr string = config.ADDR
+var _addr string = config.GetAddress()
 
 const _pollRate = 20 * time.Millisecond
 

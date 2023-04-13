@@ -7,12 +7,19 @@ import (
 	"Elevator/network"
 	"Elevator/request"
 	"Elevator/synchronizer"
+	"flag"
 	"fmt"
 	"time"
 )
 
 func main() {
 	fmt.Println("Starting elevator")
+	port := flag.Int("port", 0, "")
+	flag.Parse()
+	if (*port != 0) {
+		 config.Port =  *port
+	}
+	network.LocalID = network.GetID()
 	elevio.DefaultInit()
 	elevator := elevatorFSM.InitializeElevator()
 	drv_buttons := make(chan elevio.ButtonEvent)
