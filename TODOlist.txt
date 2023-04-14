@@ -26,3 +26,13 @@ sudo iptables -A INPUT -p tcp --dport 11111 -j ACCEPT
 sudo iptables -A INPUT -p tcp --sport 11111 -j ACCEPT
 
 sudo iptables -A INPUT -j DROP
+
+-----------------------------
+Network states:
+map content:
+	[0] key: 10.100.23.13:12345, value: {0 -1 true [[0 0 0] [2 2 0] [2 2 0] [0 2 0]] false map[10.100.23.13:11111:[0 0 0 0] 10.100.23.13:15657:[0 0 0 0]] 2023-04-14 13:31:33.4106764 +0200 CEST}
+	[1] key: 10.100.23.13:11111, value: {2 1 true [[0 0 0] [0 2 0] [0 2 0] [0 2 0]] false map[10.100.23.13:12345:[0 0 0 0] 10.100.23.13:15657:[0 0 0 0]] 2023-04-14 13:31:33.388118299 +0200 CEST}
+Connected nodes:
+[]string{"10.100.23.13:11111", "10.100.23.13:12345"}
+-----------------------------
+
