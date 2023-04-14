@@ -253,7 +253,9 @@ func SyncReciever() {
 		select {
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
-				LastRequestUpdateTime = time.Now()
+				if isSynchronized {
+					LastRequestUpdateTime = time.Now()
+				}
 				GlobalElevatorStates.Store(m.ID, m.State)
 			}
 		}
