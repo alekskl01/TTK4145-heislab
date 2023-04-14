@@ -197,6 +197,13 @@ func GetID() string {
 func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	// Ensure we have enough time to get updated states from network
 	time.Sleep(4 * config.UPDATE_DELAY)
+	fmt.Println("-----------------------------")
+	fmt.Println("Network states:")
+	PrintSyncMap(GlobalElevatorStates)
+	fmt.Println("Connected nodes:")
+	fmt.Printf("%#v", GetOtherConnectedNodes())
+	fmt.Println()
+	fmt.Println("-----------------------------")
 	if !isSynchronized {
 		hallOrders, useLocalState := GetNewestOrdersFromNetwork()
 		if !useLocalState {
