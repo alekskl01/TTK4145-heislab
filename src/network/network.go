@@ -22,8 +22,11 @@ var ConnectedNodes []string
 
 var LastRequestUpdateTime time.Time
 
+// Used to disable broadcasting of state prior to resynchronization with the network
+var EnableBroadcast = true
+
 // Only needs to be determined once on startup
-var LocalID string 
+var LocalID string
 
 type SyncMessage struct {
 	ID    string
@@ -65,8 +68,8 @@ func CheckIfNodeIsConnected(id string) bool {
 }
 
 func IsHallOrderCheapest(hall_floor int, button_type elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
-	 is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
-	if (len(GetOtherConnectedNodes()) == 0) {
+	is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
+	if len(GetOtherConnectedNodes()) == 0 {
 		return true
 	}
 	cheapest_cost := config.HIGH_COST
@@ -75,7 +78,7 @@ func IsHallOrderCheapest(hall_floor int, button_type elevio.ButtonType, floor *i
 		if ok {
 			sync_state := state.(SyncState)
 			cost := costcalculator.GetCostOfHallOrder(hall_floor, button_type, sync_state.Floor, sync_state.Direction, sync_state.IsObstructed, sync_state.LocalRequests)
-			if (cost < cheapest_cost) {
+			if cost < cheapest_cost {
 				cheapest_cost = cost
 			}
 		}
@@ -161,8 +164,8 @@ func GetID() string {
 	if err != nil {
 		fmt.Println(err)
 		localIP = "DISCONNECTED"
-	}	
-	
+	}
+
 	return (localIP + ":" + strconv.Itoa(config.Port))
 }
 
@@ -178,6 +181,10 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 	for {
 		select {
 		case p := <-peerUpdateCh:
+			if len(p.Peers) == 0 {
+				// We are disconnected from the newtwork, disable broadcast.
+				EnableBroadcast = false
+			}
 			ConnectedNodes = p.Peers
 			if p.New != "" {
 				hallOrders, newestTime := GetNewestOrdersFromNetwork()
@@ -190,6 +197,8 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 					}
 					requestsUpdate <- newRequests
 				}
+				// We have resynchronized with the network, enable broadcast.
+				EnableBroadcast = true
 			}
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
@@ -204,8 +213,10 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 	syncTxCh := make(chan SyncMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
-		var cabOrders = GetCabOrdersFromNetwork()
-		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, cabOrders, LastRequestUpdateTime, *requests}}
+		if EnableBroadcast {
+			var cabOrders = GetCabOrdersFromNetwork()
+			syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, cabOrders, LastRequestUpdateTime, *requests}}
+		}
 		time.Sleep(config.UPDATE_DELAY)
 	}
 }
