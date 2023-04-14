@@ -9,9 +9,6 @@ import (
 	"time"
 )
 
-
-const _pollRate = 20 * time.Millisecond
-
 var _initialized bool = false
 var _mtx sync.Mutex
 var _conn net.Conn
@@ -56,10 +53,6 @@ func Init() {
 	_initialized = true
 }
 
-func IsValidFloor(floor int) bool {
-	return floor > 0 && floor < config.N_FLOORS
-}
-
 func SetMotorDirection(dir MotorDirection) {
 	write([4]byte{1, byte(dir), 0, 0})
 }
@@ -83,7 +76,7 @@ func SetStopLamp(value bool) {
 func PollButtons(receiver chan<- ButtonEvent) {
 	prev := make([][3]bool, config.N_FLOORS)
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.ELEVIO_POLL_RATE)
 		for f := 0; f < config.N_FLOORS; f++ {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
@@ -100,7 +93,7 @@ func PollButtons(receiver chan<- ButtonEvent) {
 func PollFloorSensor(receiver chan<- int) {
 	prev := -1
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.ELEVIO_POLL_RATE)
 		v := GetFloor()
 		if v != prev && v != -1 {
 			log("floor sensor triggered at floor: " + strconv.Itoa(v))
@@ -113,7 +106,7 @@ func PollFloorSensor(receiver chan<- int) {
 func PollStopButton(receiver chan<- bool) {
 	prev := false
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.ELEVIO_POLL_RATE)
 		v := GetStop()
 		if v != prev {
 			receiver <- v
@@ -125,7 +118,7 @@ func PollStopButton(receiver chan<- bool) {
 func PollObstructionSwitch(receiver chan<- bool) {
 	prev := false
 	for {
-		time.Sleep(_pollRate)
+		time.Sleep(config.ELEVIO_POLL_RATE)
 		v := GetObstruction()
 		if v != prev {
 			log("obstruction status changed to: " + strconv.FormatBool(v))

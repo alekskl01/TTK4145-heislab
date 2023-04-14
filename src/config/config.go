@@ -6,7 +6,11 @@ import (
 )
 
 // Determines how often system values are refreshed and or updated.
-const UPDATE_DELAY = time.Millisecond * 250
+const UPDATE_DELAY = 250 * time.Millisecond
+
+// A time duration such that there is a high chance of a succesful update having been performed.
+const SIGNIFICANT_DELAY = 4 * UPDATE_DELAY
+const ELEVIO_POLL_RATE = 20 * time.Millisecond
 
 const N_FLOORS int = 4
 const N_BUTTONS int = 3
@@ -14,12 +18,12 @@ const N_BUTTONS int = 3
 // For a reasonable number of floors,
 // these values should be the highest and lowest values
 // returned by the hall order cost function.
-const HIGH_COST = N_FLOORS * 100
-const LOW_COST = N_FLOORS * -100
-const MAJOR_COST = N_FLOORS * 5
+const HIGH_COST = 100 * N_FLOORS
+const LOW_COST = -100 * N_FLOORS
+const MAJOR_COST = 5 * N_FLOORS
 
-const DOOR_OPEN_DURATION = time.Millisecond * 3000
-const MOTOR_STOP_DETECTION_TIME = time.Millisecond * 3000
+const DOOR_OPEN_DURATION = 3000 * time.Millisecond
+const MOTOR_STOP_DETECTION_TIME = 3000 * time.Millisecond
 
 const FSM_CHANNEL_BUFFER_SIZE = 10
 
@@ -29,6 +33,7 @@ const BROADCAST_PORT = 27183
 const DEFAULT_PORT = 15657
 
 const IP = "localhost"
+
 var Port = DEFAULT_PORT
 
 func GetAddress() string {

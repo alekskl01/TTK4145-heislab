@@ -1,3 +1,4 @@
+// This package contains all functionality that involves network communication with others nodes.
 package network
 
 import (
@@ -16,23 +17,29 @@ import (
 )
 
 // States of all other elevators
-var GlobalElevatorStates sync.Map
+var _globalElevatorStates sync.Map
 
-// Potentially includes ourself
+// Newest Peer list from peer synchronization, may include ourself
 var ConnectedNodes []string
 
-var LastRequestUpdateTime time.Time
+// Last time this node recieved a state sync message from another node
+// and was not in the process of resynchronizing with the network (see isSynchronized).
+var _lastRequestUpdateTime time.Time
 
 // Used to intermittently disable use of local state info for actions during resynchronization with network.
-var isSynchronized = true
+var _isSynchronized = true
 
-// Only needs to be determined once on startup
+// Only needs to be determined once on startup,
+// consists of the network local ip of this machine and the port being used for
+// elevator communication on startup.
 var LocalID string
 
 type SyncMessage struct {
 	ID    string
 	State SyncState
 }
+
+var _globalCabOrders map[string]([config.N_FLOORS]request.RequestState)
 
 type SyncState struct {
 	// Local elevator data
@@ -51,138 +58,6 @@ func log(text string) {
 	fmt.Println("Network: " + text)
 }
 
-func GetOtherConnectedNodes() []string {
-	var retval []string
-	var allNodes = ConnectedNodes
-	for _, node := range allNodes {
-		if node != LocalID {
-			retval = append(retval, node)
-		}
-	}
-	return retval
-}
-
-func CheckIfNodeIsConnected(id string) bool {
-	// Our local node is always connected to itself
-	if id == LocalID {
-		return true
-	}
-	var nodes = ConnectedNodes
-	for _, node := range nodes {
-		if node == id {
-			return true
-		}
-	}
-	return false
-}
-
-func IsHallOrderCheapest(hall_floor int, button_type elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
-	is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
-	if len(GetOtherConnectedNodes()) == 0 {
-		return true
-	}
-	cheapest_cost := config.HIGH_COST
-	for _, node := range GetOtherConnectedNodes() {
-		state, ok := GlobalElevatorStates.Load(node)
-		if ok {
-			sync_state := state.(SyncState)
-			cost := cost.GetCostOfHallOrder(hall_floor, button_type, sync_state.Floor, sync_state.Direction, sync_state.IsObstructed, sync_state.LocalRequests)
-			if cost < cheapest_cost {
-				cheapest_cost = cost
-			}
-		}
-	}
-
-	our_cost := cost.GetCostOfHallOrder(hall_floor, button_type, *floor, *direction, *is_obstructed, *requests)
-	return our_cost <= cheapest_cost
-}
-
-func GetCabOrdersFromNetwork() map[string]([config.N_FLOORS]request.RequestState) {
-	retval := make(map[string]([config.N_FLOORS]request.RequestState))
-
-	for _, node := range GetOtherConnectedNodes() {
-		state, ok := GlobalElevatorStates.Load(node)
-		if ok {
-			var relevant [config.N_FLOORS]request.RequestState
-			for floor := 0; floor < config.N_FLOORS; floor++ {
-				relevant[floor] = state.(SyncState).LocalRequests[floor][elevio.BT_Cab]
-			}
-			retval[node] = relevant
-		}
-	}
-	return retval
-}
-
-func GetLocalCabOrdersFromNetwork() []request.RequestState {
-	retval := make(([]request.RequestState), config.N_FLOORS)
-	for i := range retval {
-		retval[i] = 0
-	}
-	for _, node := range GetOtherConnectedNodes() {
-		state, ok1 := GlobalElevatorStates.Load(node)
-		if ok1 {
-			cab_orders, ok2 := state.(SyncState).GlobalCabOrders[LocalID]
-			if ok2 {
-				// Get the union of highest values for each request state
-				for i, union_val := range retval {
-					if cab_orders[i] > union_val {
-						retval[i] = cab_orders[i]
-					}
-				}
-			}
-		}
-	}
-	return retval
-}
-
-func GetNewestOrdersFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, bool) {
-	var nodes = GetOtherConnectedNodes()
-	nodes = append(nodes, LocalID)
-	sort.Strings(nodes)
-	var newestTime = time.Time{}
-	var newestState SyncState
-	var useLocalState = false
-	for _, node := range nodes {
-		if node == LocalID {
-			if LastRequestUpdateTime.After(newestTime) {
-				useLocalState = true
-				newestTime = LastRequestUpdateTime
-			}
-		} else {
-			state, ok := GlobalElevatorStates.Load(node)
-			if ok && (state.(SyncState)).RequestUpdateTime.After(newestTime) {
-				useLocalState = false
-				newestState = state.(SyncState)
-				newestTime = newestState.RequestUpdateTime
-			}
-		}
-	}
-	return newestState.LocalRequests, useLocalState
-}
-
-// From other elevators, gets hall request states for a relevant hall button or local version of our cab requests for cab button.
-func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
-	var retval []request.RequestState
-
-	for _, node := range GetOtherConnectedNodes() {
-		stateAsAny, ok := GlobalElevatorStates.Load(node)
-		if ok {
-			var state = stateAsAny.(SyncState)
-			// Ignore states from nodes mid way in synchronization
-			if state.IsSynchronized {
-				if button == elevio.BT_Cab {
-					var state = stateAsAny.(SyncState).GlobalCabOrders[LocalID][floor]
-					retval = append(retval, state)
-				} else {
-					var state = stateAsAny.(SyncState).LocalRequests[floor][button]
-					retval = append(retval, state)
-				}
-			}
-		}
-	}
-	return retval
-}
-
 func GetID() string {
 	// We assume one elevator per local ip because of hardware limits.
 	localIP, err := localip.LocalIP()
@@ -194,19 +69,159 @@ func GetID() string {
 	return (localIP + ":" + strconv.Itoa(config.Port))
 }
 
-func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+// For most cases it is not interesting to know that this node is connected to itself.
+func getOtherConnectedNodes() []string {
+	var retval []string
+	var allNodes = ConnectedNodes
+	for _, node := range allNodes {
+		if node != LocalID {
+			retval = append(retval, node)
+		}
+	}
+	return retval
+}
+
+func CheckIfNodeIsConnected(id string) bool {
+	// It is expected that this node is connected to itself.
+	if id == LocalID {
+		return true
+	}
+	var nodes = getOtherConnectedNodes()
+	for _, node := range nodes {
+		if node == id {
+			return true
+		}
+	}
+	return false
+}
+
+// Checks all connected nodes to see if it is 'cheapest' for this node to
+// fulfill a specific hall order. Weighting based on the cost function.
+// Important note: returns true if our cost is the same as the cost for other nodes,
+// this is vital to ensure that orders are handled.
+func IsHallOrderCheapest(hallFloor int, buttonType elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
+	isObstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
+	// Noone else to take it
+	if len(getOtherConnectedNodes()) == 0 {
+		return true
+	}
+	cheapestCost := config.HIGH_COST
+	for _, node := range getOtherConnectedNodes() {
+		stateAsAny, ok := _globalElevatorStates.Load(node)
+		if ok {
+			state := stateAsAny.(SyncState)
+			cost := cost.GetCostOfHallOrder(hallFloor, buttonType, state.Floor, state.Direction, state.IsObstructed, state.LocalRequests)
+			if cost < cheapestCost {
+				cheapestCost = cost
+			}
+		}
+	}
+
+	ourCost := cost.GetCostOfHallOrder(hallFloor, buttonType, *floor, *direction, *isObstructed, *requests)
+	return ourCost <= cheapestCost
+}
+
+// Used get the cab orders of other nodes and store them,
+// so they can later be fetched with GetLocalCabOrdersFromNetwork() in case they go down.
+// Trusts that the newest cab orders given by a node are correct.
+func getCabOrdersFromNetwork() {
+	for _, node := range getOtherConnectedNodes() {
+		state, ok := _globalElevatorStates.Load(node)
+		if ok {
+			var nodeCabOrders [config.N_FLOORS]request.RequestState
+			for floor := 0; floor < config.N_FLOORS; floor++ {
+				nodeCabOrders[floor] = state.(SyncState).LocalRequests[floor][elevio.BT_Cab]
+			}
+			_globalCabOrders[node] = nodeCabOrders
+		}
+	}
+}
+
+// Used to fetch this node's cab orders from before going down stored by other nodes.
+// These values are stored using GetLocalCabOrdersFromNetwork().
+// To ensure no orders are lost we take the highest RequestState union of those stored by all nodes.
+// (this may lead to some excess fulfillment in some cases)
+func GetLocalCabOrdersFromNetwork() []request.RequestState {
+	cabOrderUnion := make(([]request.RequestState), config.N_FLOORS)
+	for i := range cabOrderUnion {
+		cabOrderUnion[i] = 0
+	}
+	for _, node := range getOtherConnectedNodes() {
+		state, ok1 := _globalElevatorStates.Load(node)
+		if ok1 {
+			cabOrders, ok2 := state.(SyncState).GlobalCabOrders[LocalID]
+			if ok2 {
+				// Get the union of highest values for each request state
+				for i, unionState := range cabOrderUnion {
+					if cabOrders[i] > unionState {
+						cabOrderUnion[i] = cabOrders[i]
+					}
+				}
+			}
+		}
+	}
+	return cabOrderUnion
+}
+
+// Used to synchronize with network, at startup and when connection to the network is lost.
+// In such a case the network is standardized to use the newest synchronized state.
+// Note: it is important to iterate through the list of nodes in a consistently sorted order,
+// including this node to avoid errors when multiple nodes have the same update time.
+func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, bool) {
+	var nodes = getOtherConnectedNodes()
+	nodes = append(nodes, LocalID)
+	sort.Strings(nodes)
+	var newestTime = time.Time{}
+	var newestState SyncState
+	var useLocalState = false
+	for _, node := range nodes {
+		if node == LocalID {
+			if _lastRequestUpdateTime.After(newestTime) {
+				useLocalState = true
+				newestTime = _lastRequestUpdateTime
+			}
+		} else {
+			state, ok := _globalElevatorStates.Load(node)
+			if ok && (state.(SyncState)).RequestUpdateTime.After(newestTime) {
+				useLocalState = false
+				newestState = state.(SyncState)
+				newestTime = newestState.RequestUpdateTime
+			}
+		}
+	}
+	return newestState.LocalRequests, useLocalState
+}
+
+// From other elevators, gets hall request states for a relevant hall button or their local version of our cab requests for cab buttons.
+func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
+	var indexStates []request.RequestState
+
+	for _, node := range getOtherConnectedNodes() {
+		stateAsAny, ok := _globalElevatorStates.Load(node)
+		if ok {
+			var state = stateAsAny.(SyncState)
+			// Ignore states from nodes mid way in synchronization
+			if state.IsSynchronized {
+				if button == elevio.BT_Cab {
+					var state = stateAsAny.(SyncState).GlobalCabOrders[LocalID][floor]
+					indexStates = append(indexStates, state)
+				} else {
+					var state = stateAsAny.(SyncState).LocalRequests[floor][button]
+					indexStates = append(indexStates, state)
+				}
+			}
+		}
+	}
+	return indexStates
+}
+
+// Synchronizes this node's hall orders with the newest ones on the network,
+// allowing for this node take part in regular state synchronization.
+func DelayedResynchronization(requestsUpdateCh chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	// Ensure we have enough time to get updated states from network
-	time.Sleep(4 * config.UPDATE_DELAY)
-	fmt.Println("-----------------------------")
-	fmt.Println("Network states:")
-	PrintSyncMap(GlobalElevatorStates)
-	fmt.Println("Connected nodes:")
-	fmt.Printf("%#v", GetOtherConnectedNodes())
-	fmt.Println("LastRequestUpdateTime: " + LastRequestUpdateTime.String())
-	fmt.Println()
-	fmt.Println("-----------------------------")
-	if !isSynchronized {
-		hallOrders, useLocalState := GetNewestOrdersFromNetwork()
+	time.Sleep(config.SIGNIFICANT_DELAY)
+	if !_isSynchronized {
+		hallOrders, useLocalState := GetNewestRequestsFromNetwork()
 		if !useLocalState {
 			var newRequests = *requests
 			for floor := 0; floor < config.N_FLOORS; floor++ {
@@ -214,76 +229,76 @@ func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_B
 					newRequests[floor][button] = hallOrders[floor][button]
 				}
 			}
-			fmt.Println("-----------------------------")
-			fmt.Println("New Request matrix:")
-			fmt.Printf("%#v", newRequests)
-			fmt.Println()
-			fmt.Println("-----------------------------")
-			requestsUpdate <- newRequests
+			requestsUpdateCh <- newRequests
 		}
-		// We have resynchronized with the network, enable broadcast.
+		// We have resynchronized with the network, enable regular state synchronization.
 		log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
-		isSynchronized = true
+		_isSynchronized = true
 	}
 }
 
-func PeerUpdateReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
-	go peers.Transmitter(config.PEER_MANAGEMENT_PORT, LocalID, peerTxEnable)
+// Handles peer node management, when other nodes and connected or disconnected to or from this one.
+// Note that specific resynchronization handling is needed when a new node is connected and this node has been disconnected.
+func PeerUpdateReciever(peerTxEnableCh <-chan bool, requestsUpdateCh chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+	go peers.Transmitter(config.PEER_MANAGEMENT_PORT, LocalID, peerTxEnableCh)
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	go peers.Receiver(config.PEER_MANAGEMENT_PORT, peerUpdateCh)
 	for {
 		select {
 		case p := <-peerUpdateCh:
-			if len(p.Peers) == 0 {
+			ConnectedNodes = p.Peers
+			if len(getOtherConnectedNodes()) == 0 {
 				// We are disconnected from the newtwork, disable broadcast.
-				isSynchronized = false
+				_isSynchronized = false
 				log("Disconnected from network")
 			}
-
-			ConnectedNodes = p.Peers
-			if p.New != "" {
-				go DelayedResynchronization(requestsUpdate, requests)
+			if p.New != "" && p.New != LocalID {
+				go DelayedResynchronization(requestsUpdateCh, requests)
 			}
 		}
 	}
 }
 
 func SyncReciever() {
-	LastRequestUpdateTime = time.Now()
+	_lastRequestUpdateTime = time.Now()
 	syncRxCh := make(chan SyncMessage)
 	go bcast.Receiver(config.BROADCAST_PORT, syncRxCh)
 	for {
 		select {
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
-				if isSynchronized {
-					LastRequestUpdateTime = time.Now()
+				if _isSynchronized {
+					// This node is not considered updated if it has not resynchronized with the network.
+					_lastRequestUpdateTime = time.Now()
 				}
-				GlobalElevatorStates.Store(m.ID, m.State)
+				_globalElevatorStates.Store(m.ID, m.State)
 			}
 		}
 	}
 }
 
-func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed *bool,
+	 requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+	_globalCabOrders = make(map[string]([config.N_FLOORS]request.RequestState))
 	syncTxCh := make(chan SyncMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
-		var cabOrders = GetCabOrdersFromNetwork()
-		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, *requests, isSynchronized, cabOrders, LastRequestUpdateTime}}
+		// Update global cab orders before broadcasting.
+		getCabOrdersFromNetwork()
+		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed,
+			 *requests, _isSynchronized, _globalCabOrders, _lastRequestUpdateTime}}
 		time.Sleep(config.UPDATE_DELAY)
 	}
 }
 
+// Used to debug network failures.
 func NetworkCheck(requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	for {
 		fmt.Println("-----------------------------")
 		fmt.Println("Network states:")
-		PrintSyncMap(GlobalElevatorStates)
+		PrintSyncMap(_globalElevatorStates)
 		fmt.Println("Connected nodes:")
-		fmt.Printf("%#v", GetOtherConnectedNodes())
+		fmt.Printf("%#v", getOtherConnectedNodes())
 		fmt.Println()
 		fmt.Println("-----------------------------")
 		fmt.Println("Request matrix:")
@@ -294,6 +309,7 @@ func NetworkCheck(requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestSt
 	}
 }
 
+// Copied from https://stackoverflow.com/questions/58995416/how-to-pretty-print-the-contents-of-a-sync-map
 func PrintSyncMap(m sync.Map) {
 	// print map,
 	fmt.Println("map content:")

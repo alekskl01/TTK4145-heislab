@@ -11,6 +11,10 @@ import (
 
 var CheapestRequests [config.N_FLOORS][config.N_BUTTONS]bool
 
+func log(text string) {
+	fmt.Println("FSM: " + text)
+}
+
 func InitCheapestRequests() {
 	// Cab orders are always cheapest for us to take
 	for floor := 0; floor < config.N_FLOORS; floor++ {
@@ -18,68 +22,68 @@ func InitCheapestRequests() {
 	}
 }
 
-func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonEvent, event_floorArrival <-chan int,
-	event_obstruction <-chan bool, event_stopButton <-chan bool, ch_elevatorUnavailable chan<- bool, event_requestsUpdated <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.ButtonEvent, floorArrivalEventCh <-chan int,
+	obstructionEventCh <-chan bool, stopButtonEventCh <-chan bool, elevatorUnavailableCh chan<- bool, requestsUpdatedCh <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	for {
 		select {
-		case order := <-event_buttonPress:
+		case order := <-buttonPressEventCh:
 			floor := order.Floor
-			button_type := order.Button
-			var otherStates = network.GetRequestStatesAtIndex(floor, button_type)
+			buttonType := order.Button
+			var otherStates = network.GetRequestStatesAtIndex(floor, buttonType)
 
 			// Prevents taking hall orders if we are not connected to the network
-			if len(otherStates) == 0 && button_type != elevio.BT_Cab {
+			if len(otherStates) == 0 && buttonType != elevio.BT_Cab {
 				break
 			}
 
 			switch elevator.State {
 			case DoorOpen:
 				if elevator.Floor == floor {
-					if (button_type == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
-						(button_type == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
+					if (buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
+						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
 
-						if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
-							elevator.Requests[floor][button_type] = request.PendingRequest
+						if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+							elevator.Requests[floor][buttonType] = request.PendingRequest
 						}
 					}
 					doorOpenTimer(elevator)
 				} else {
-					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
-						elevator.Requests[floor][button_type] = request.PendingRequest
+					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 				}
 
 			case Moving:
-				if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
-					elevator.Requests[floor][button_type] = request.PendingRequest
+				if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+					elevator.Requests[floor][buttonType] = request.PendingRequest
 				}
 
 			case MotorStop:
-				if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
-					elevator.Requests[floor][button_type] = request.PendingRequest
+				if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+					elevator.Requests[floor][buttonType] = request.PendingRequest
 				}
 
 			case Idle:
 				if elevator.Floor == floor {
-					if (button_type == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
-						(button_type == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
+					if (buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
+						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
 
-						if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
-							elevator.Requests[floor][button_type] = request.PendingRequest
+						if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+							elevator.Requests[floor][buttonType] = request.PendingRequest
 						}
 					}
 					elevio.SetDoorOpenLamp(true)
 					doorOpenTimer(elevator)
 					elevator.State = DoorOpen
 				} else {
-					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][button_type], otherStates) {
-						elevator.Requests[floor][button_type] = request.PendingRequest
+					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 				}
 			}
 			setButtonLights(elevator)
 
-		case newFloor := <-event_floorArrival:
+		case newFloor := <-floorArrivalEventCh:
 			elevator.Floor = newFloor
 
 			elevio.SetFloorIndicator(newFloor)
@@ -119,7 +123,7 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 
 			}
 
-		case obstruction := <-event_obstruction:
+		case obstruction := <-obstructionEventCh:
 			elevator.Obstruction = obstruction
 
 			if elevator.State == DoorOpen {
@@ -130,19 +134,19 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 			}
 
 		case <-elevator.DoorTimer.timer.C:
-			Log("DoorTimer")
+			log("DoorTimer")
 			if elevator.Obstruction {
-				ch_elevatorUnavailable <- true
+				elevatorUnavailableCh <- true
 			} else {
 				onDoorTimeout(elevator)
 			}
 
 		case <-elevator.MotorStopTimer.timer.C:
-			Log("Triggered motor stop timer")
+			log("Triggered motor stop timer")
 			switch elevator.State {
 			case Moving:
 				elevator.State = MotorStop
-				ch_elevatorUnavailable <- true
+				elevatorUnavailableCh <- true
 				if !existsRequestsBelow(elevator) && !existsRequestsAbove(elevator) {
 					var otherStates = network.GetRequestStatesAtIndex(elevator.Floor+int(elevator.Direction), elevio.BT_Cab)
 					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab], otherStates) {
@@ -156,9 +160,9 @@ func RunStateMachine(elevator *Elevator, event_buttonPress <-chan elevio.ButtonE
 				elevio.SetMotorDirection(elevator.Direction)
 				elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
-		case updated_requests := <-event_requestsUpdated:
-			Log("Updated Requests")
-			elevator.Requests = updated_requests
+		case updatedRequests := <-requestsUpdatedCh:
+			log("Updated Requests")
+			elevator.Requests = updatedRequests
 			setButtonLights(elevator)
 
 			// Must be here to be able to confirm a new request before moving the elevator (When in idle mode), because it wil choose direction stop if not
@@ -185,7 +189,7 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				} else {
-					Log("Could not delete order 1")
+					log("Could not delete order condition 1, other states:")
 					fmt.Printf("%#v", otherStates)
 					fmt.Println()
 				}
@@ -198,7 +202,7 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				} else {
-					Log("Could not delete order 2")
+					log("Could not delete order condition 2, other states:")
 					fmt.Printf("%#v", otherStates)
 					fmt.Println()
 				}
@@ -209,7 +213,7 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				} else {
-					Log("Could not delete order 3")
+					log("Could not delete order condition 3, other states:")
 					fmt.Printf("%#v", otherStates)
 					fmt.Println()
 				}
@@ -222,7 +226,7 @@ func onDoorTimeout(elevator *Elevator) {
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				} else {
-					Log("Could not delete order 4")
+					log("Could not delete order condition 4, other states:")
 					fmt.Printf("%#v", otherStates)
 					fmt.Println()
 				}
@@ -243,11 +247,6 @@ func onDoorTimeout(elevator *Elevator) {
 }
 
 func doorOpenTimer(elevator *Elevator) {
-	const doorOpenTime = config.DOOR_OPEN_DURATION
 	elevio.SetDoorOpenLamp(true)
-	elevator.DoorTimer.reset(doorOpenTime)
-}
-
-func Log(text string) {
-	fmt.Println("FSM: " + text)
+	elevator.DoorTimer.reset(config.DOOR_OPEN_DURATION)
 }

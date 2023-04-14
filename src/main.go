@@ -35,17 +35,19 @@ func main() {
 	go network.PeerUpdateReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
 	go network.SyncReciever()
 	// Ensure we have more than enough time to get requests from network
-	time.Sleep(4 * config.UPDATE_DELAY)
+	time.Sleep(config.SIGNIFICANT_DELAY)
 	var cabOrders = network.GetLocalCabOrdersFromNetwork()
 	// Keep in mind this also includes cab orders from another elevator,
 	// to simplify data restructuring.
-	hallOrders, _ := network.GetNewestOrdersFromNetwork()
-	for floor := 0; floor < config.N_FLOORS; floor++ {
-		for button := 0; button < config.N_BUTTONS; button++ {
-			if button == elevio.BT_Cab {
-				elevator.Requests[floor][elevio.BT_Cab] = cabOrders[floor]
-			} else {
-				elevator.Requests[floor][button] = hallOrders[floor][button]
+	hallOrders, useLocalState := network.GetNewestRequestsFromNetwork()
+	if !useLocalState {
+		for floor := 0; floor < config.N_FLOORS; floor++ {
+			for button := 0; button < config.N_BUTTONS; button++ {
+				if button == elevio.BT_Cab {
+					elevator.Requests[floor][elevio.BT_Cab] = cabOrders[floor]
+				} else {
+					elevator.Requests[floor][button] = hallOrders[floor][button]
+				}
 			}
 		}
 	}

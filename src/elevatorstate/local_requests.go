@@ -79,6 +79,8 @@ func shouldStop(elev *Elevator) bool {
 	return true
 }
 
+// Worth noting that this function takes into account the requests of other nodes,
+// in order to properly trigger cascading deletion for all nodes.
 func clearRequestAtFloor(elev *Elevator) {
 	var servicedHallRequest elevio.ButtonType
 
