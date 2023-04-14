@@ -2,7 +2,7 @@ package main
 
 import (
 	"Elevator/config"
-	"Elevator/elevatorFSM"
+	"Elevator/elevatorstate"
 	"Elevator/elevio"
 	"Elevator/network"
 	"Elevator/request"
@@ -21,7 +21,7 @@ func main() {
 	}
 	network.LocalID = network.GetID()
 	elevio.Init()
-	elevator := elevatorFSM.InitializeElevator()
+	elevator := elevatorstate.InitializeElevator()
 	drv_buttons := make(chan elevio.ButtonEvent)
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
@@ -55,10 +55,10 @@ func main() {
 	go elevio.PollStopButton(drv_stop)
 
 	go synchronizer.LocalRequestSynchronization(&elevator, requestsUpdate)
-	elevatorFSM.InitCheapestRequests()
+	elevatorstate.InitCheapestRequests()
 	go synchronizer.UpdateCheapestRequests(&elevator.Floor, &elevator.Direction, &elevator.Obstruction, &elevator.Requests)
 	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.Obstruction, &elevator.Requests)
-	go elevatorFSM.RunStateMachine(&elevator, drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, requestsUpdate)
+	go elevatorstate.RunStateMachine(&elevator, drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, requestsUpdate)
 	for {
 		time.Sleep(time.Second * 20)
 	}

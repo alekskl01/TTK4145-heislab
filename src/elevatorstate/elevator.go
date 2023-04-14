@@ -1,4 +1,4 @@
-package elevatorFSM
+package elevatorstate
 
 import (
 	"Elevator/config"
