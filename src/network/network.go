@@ -210,10 +210,15 @@ func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_B
 		if !useLocalState {
 			var newRequests = *requests
 			for floor := 0; floor < config.N_FLOORS; floor++ {
-				for button := 1; button < config.N_BUTTONS; button++ {
+				for button := 0; button < (config.N_BUTTONS - 1); button++ {
 					newRequests[floor][button] = hallOrders[floor][button]
 				}
 			}
+			fmt.Println("-----------------------------")
+			fmt.Println("New Request matrix:")
+			fmt.Printf("%#v", newRequests)
+			fmt.Println()
+			fmt.Println("-----------------------------")
 			requestsUpdate <- newRequests
 		}
 		// We have resynchronized with the network, enable broadcast.
