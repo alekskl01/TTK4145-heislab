@@ -24,7 +24,7 @@ var ConnectedNodes []string
 var LastRequestUpdateTime time.Time
 
 // Used to intermittently disable use of local state info for actions during resynchronization with network.
-var IsSynchronized = true
+var isSynchronized = true
 
 // Only needs to be determined once on startup
 var LocalID string
@@ -197,19 +197,21 @@ func GetID() string {
 func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	// Ensure we have enough time to get updated states from network
 	time.Sleep(4 * config.UPDATE_DELAY)
-	hallOrders, useLocalState := GetNewestOrdersFromNetwork()
-	if !useLocalState {
-		var newRequests = *requests
-		for floor := 0; floor < config.N_FLOORS; floor++ {
-			for button := 1; button < config.N_BUTTONS; button++ {
-				newRequests[floor][button] = hallOrders[floor][button]
+	if !isSynchronized {
+		hallOrders, useLocalState := GetNewestOrdersFromNetwork()
+		if !useLocalState {
+			var newRequests = *requests
+			for floor := 0; floor < config.N_FLOORS; floor++ {
+				for button := 1; button < config.N_BUTTONS; button++ {
+					newRequests[floor][button] = hallOrders[floor][button]
+				}
 			}
+			requestsUpdate <- newRequests
 		}
-		requestsUpdate <- newRequests
+		// We have resynchronized with the network, enable broadcast.
+		log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
+		isSynchronized = true
 	}
-	// We have resynchronized with the network, enable broadcast.
-	log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
-	IsSynchronized = true
 }
 
 func PeerUpdateReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
@@ -223,7 +225,7 @@ func PeerUpdateReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.
 		case p := <-peerUpdateCh:
 			if len(p.Peers) == 0 {
 				// We are disconnected from the newtwork, disable broadcast.
-				IsSynchronized = false
+				isSynchronized = false
 				log("Disconnected from network")
 			}
 
@@ -255,7 +257,7 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
 		var cabOrders = GetCabOrdersFromNetwork()
-		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, *requests, IsSynchronized, cabOrders, LastRequestUpdateTime}}
+		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, *requests, isSynchronized, cabOrders, LastRequestUpdateTime}}
 		time.Sleep(config.UPDATE_DELAY)
 	}
 }
