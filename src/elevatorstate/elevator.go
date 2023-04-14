@@ -1,3 +1,5 @@
+// This file manages and keeps track of the local elevator on a low level,
+// and servers as a middleman between the main state machine and elevio
 package elevatorstate
 
 import (
@@ -17,28 +19,29 @@ const (
 	MotorStop ElevatorState = 3
 )
 
+// Expanded timer object that is needed to check remaining time left.
 type CheckableTimer struct {
 	timer *time.Timer
 	end   time.Time
 }
 
-func NewCheckableTimer(t time.Duration) *CheckableTimer {
+func createNewCheckableTimer(t time.Duration) *CheckableTimer {
 	return &CheckableTimer{time.NewTimer(t), time.Now().Add(t)}
 }
 
-func (checkable_timer *CheckableTimer) Reset(t time.Duration) {
-	checkable_timer.timer.Reset(t)
-	checkable_timer.end = time.Now().Add(t)
+func (checkableTimer *CheckableTimer) reset(t time.Duration) {
+	checkableTimer.timer.Reset(t)
+	checkableTimer.end = time.Now().Add(t)
 }
 
-func (checkable_timer *CheckableTimer) Stop() {
-	checkable_timer.timer.Stop()
+func (checkableTimer *CheckableTimer) stop() {
+	checkableTimer.timer.Stop()
 }
 
-func (checkable_timer *CheckableTimer) hasTimeRemaining() bool {
-	time_left := time.Until(checkable_timer.end)
-	fmt.Println(time_left)
-	return (time_left > 0)
+func (checkableTimer *CheckableTimer) hasTimeRemaining() bool {
+	timeLeft := time.Until(checkableTimer.end)
+	fmt.Println(timeLeft)
+	return (timeLeft > 0)
 }
 
 type Elevator struct {
@@ -59,10 +62,10 @@ func InitializeElevator() Elevator {
 	elevator.Obstruction = false
 
 	//Timers
-	elevator.DoorTimer = *NewCheckableTimer(config.DOOR_OPEN_DURATION)
-	elevator.DoorTimer.Stop()
-	elevator.MotorStopTimer = *NewCheckableTimer(config.MOTOR_STOP_DETECTION_TIME)
-	elevator.MotorStopTimer.Stop()
+	elevator.DoorTimer = *createNewCheckableTimer(config.DOOR_OPEN_DURATION)
+	elevator.DoorTimer.stop()
+	elevator.MotorStopTimer = *createNewCheckableTimer(config.MOTOR_STOP_DETECTION_TIME)
+	elevator.MotorStopTimer.stop()
 
 	//Make sure elevator is not between floors
 	elevator.Direction = elevio.MD_Down
@@ -72,28 +75,13 @@ func InitializeElevator() Elevator {
 	return *elevator
 }
 
-func Stop(elevator *Elevator) {
-	elevio.SetMotorDirection(elevio.MD_Stop)
-	elevator.Direction = elevio.MD_Stop
-}
-
-func GoUp(elevator *Elevator) {
-	elevio.SetMotorDirection(elevio.MD_Up)
-	elevator.Direction = elevio.MD_Up
-}
-
-func GoDown(elevator *Elevator) {
-	elevio.SetMotorDirection(elevio.MD_Down)
-	elevator.Direction = elevio.MD_Down
-}
-
 func setButtonLights(elevator *Elevator) {
-	for f := 0; f < config.N_FLOORS; f++ {
-		for b := 0; b < config.N_BUTTONS; b++ {
-			if request.ShouldActivateButtonLight(elevator.Requests[f][b]) {
-				elevio.SetButtonLamp(elevio.ButtonType(b), f, true)
+	for floor := 0; floor < config.N_FLOORS; floor++ {
+		for button := 0; button < config.N_BUTTONS; button++ {
+			if request.ShouldActivateButtonLight(elevator.Requests[floor][button]) {
+				elevio.SetButtonLamp(elevio.ButtonType(button), floor, true)
 			} else {
-				elevio.SetButtonLamp(elevio.ButtonType(b), f, false)
+				elevio.SetButtonLamp(elevio.ButtonType(button), floor, false)
 			}
 		}
 	}
