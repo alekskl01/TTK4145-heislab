@@ -2,13 +2,14 @@ package network
 
 import (
 	"Elevator/config"
-	"Elevator/costcalculator"
+	"Elevator/cost"
 	"Elevator/elevio"
 	"Elevator/network/bcast"
 	"Elevator/network/localip"
 	"Elevator/network/peers"
 	"Elevator/request"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -77,14 +78,14 @@ func IsHallOrderCheapest(hall_floor int, button_type elevio.ButtonType, floor *i
 		state, ok := GlobalElevatorStates.Load(node)
 		if ok {
 			sync_state := state.(SyncState)
-			cost := costcalculator.GetCostOfHallOrder(hall_floor, button_type, sync_state.Floor, sync_state.Direction, sync_state.IsObstructed, sync_state.LocalRequests)
+			cost := cost.GetCostOfHallOrder(hall_floor, button_type, sync_state.Floor, sync_state.Direction, sync_state.IsObstructed, sync_state.LocalRequests)
 			if cost < cheapest_cost {
 				cheapest_cost = cost
 			}
 		}
 	}
 
-	our_cost := costcalculator.GetCostOfHallOrder(hall_floor, button_type, *floor, *direction, *is_obstructed, *requests)
+	our_cost := cost.GetCostOfHallOrder(hall_floor, button_type, *floor, *direction, *is_obstructed, *requests)
 	return our_cost <= cheapest_cost
 }
 
@@ -126,17 +127,29 @@ func GetLocalCabOrdersFromNetwork() []request.RequestState {
 	return retval
 }
 
-func GetNewestOrdersFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, time.Time) {
+func GetNewestOrdersFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, bool) {
 	var nodes = GetOtherConnectedNodes()
+	nodes = append(nodes, LocalID)
+	sort.Strings(nodes)
 	var newestTime = time.Time{}
 	var newestState SyncState
+	var useLocalState = false
 	for _, node := range nodes {
-		state, ok := GlobalElevatorStates.Load(node)
-		if ok && (state.(SyncState)).RequestUpdateTime.After(newestTime) {
-			newestState = state.(SyncState)
+		if node == LocalID {
+			if LastRequestUpdateTime.After(newestTime) {
+				useLocalState = true
+				newestTime = LastRequestUpdateTime
+			}
+		} else {
+			state, ok := GlobalElevatorStates.Load(node)
+			if ok && (state.(SyncState)).RequestUpdateTime.After(newestTime) {
+				useLocalState = false
+				newestState = state.(SyncState)
+				newestTime = newestState.RequestUpdateTime
+			}
 		}
 	}
-	return newestState.LocalRequests, newestTime
+	return newestState.LocalRequests, useLocalState
 }
 
 // From other elevators, gets hall request states for a relevant hall button or local version of our cab requests for cab button.
@@ -187,8 +200,8 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 			}
 			ConnectedNodes = p.Peers
 			if p.New != "" {
-				hallOrders, newestTime := GetNewestOrdersFromNetwork()
-				if newestTime.After(LastRequestUpdateTime) {
+				hallOrders, useLocalState := GetNewestOrdersFromNetwork()
+				if !useLocalState {
 					var newRequests = *requests
 					for floor := 0; floor < config.N_FLOORS; floor++ {
 						for button := 1; button < config.N_BUTTONS; button++ {

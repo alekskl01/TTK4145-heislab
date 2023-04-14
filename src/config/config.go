@@ -14,9 +14,9 @@ const N_BUTTONS int = 3
 // For a reasonable number of floors,
 // these values should be the highest and lowest values
 // returned by the hall order cost function.
-const HIGH_COST int = N_FLOORS * 100
-const LOW_COST int = N_FLOORS * -100
-const MAJOR_COST int = N_FLOORS * 5
+const HIGH_COST = N_FLOORS * 100
+const LOW_COST = N_FLOORS * -100
+const MAJOR_COST = N_FLOORS * 5
 
 const DOOR_OPEN_DURATION = time.Millisecond * 3000
 const MOTOR_STOP_DETECTION_TIME = time.Millisecond * 3000
@@ -28,7 +28,7 @@ const BROADCAST_PORT = 27183
 
 const DEFAULT_PORT = 15657
 
-const IP = "localhost"  //15657
+const IP = "localhost" //15657
 var Port = DEFAULT_PORT
 
 func GetAddress() string {
