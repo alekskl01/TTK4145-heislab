@@ -10,7 +10,7 @@ import (
 )
 
 func log(text string) {
-	fmt.Println("Cost Function: " + text)
+	fmt.Println("Cost calculator: " + text)
 }
 
 func getCostBetweenFloors(current_floor int, floor int) (int, elevio.MotorDirection) {
