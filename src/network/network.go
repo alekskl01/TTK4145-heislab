@@ -202,6 +202,7 @@ func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_B
 	PrintSyncMap(GlobalElevatorStates)
 	fmt.Println("Connected nodes:")
 	fmt.Printf("%#v", GetOtherConnectedNodes())
+	fmt.Println("LastRequestUpdateTime: " + LastRequestUpdateTime.String())
 	fmt.Println()
 	fmt.Println("-----------------------------")
 	if !isSynchronized {
