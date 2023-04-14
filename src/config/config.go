@@ -28,7 +28,7 @@ const BROADCAST_PORT = 27183
 
 const DEFAULT_PORT = 15657
 
-const IP = "localhost" //15657
+const IP = "localhost"
 var Port = DEFAULT_PORT
 
 func GetAddress() string {

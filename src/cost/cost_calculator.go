@@ -1,5 +1,6 @@
 // The job of the this package is calculating a comparable 'cost'
-// of fulfilling hall orders for specific nodes.
+// of fulfilling hall orders for specific nodes, so that the ideal node
+// for fulfulling an order can be determined.
 package cost
 import (
 	"Elevator/config"
@@ -28,7 +29,7 @@ func getCostBetweenFloors(current_floor int, floor int) (int, elevio.MotorDirect
 
 // Gives an approximate "cost" of taking a hall order for an elevator.
 // Being perfectly accurate and efficient is not important, while consistency is.
-func GetCostOfHallOrder(hall_floor int, button_type elevio.ButtonType, floor int, direction elevio.MotorDirection,
+func GetCostOfHallOrder(hallFloor int, button_type elevio.ButtonType, floor int, direction elevio.MotorDirection,
 	is_obstructed bool, requests [config.N_FLOORS][config.N_BUTTONS]request.RequestState) int {
 	if button_type == elevio.BT_Cab {
 		// Assume some kind of unexpected bug, ensure cost is always highest
@@ -37,40 +38,40 @@ func GetCostOfHallOrder(hall_floor int, button_type elevio.ButtonType, floor int
 	}
 
 	// Costs nothing to take a hall order we already have taken.
-	if request.IsActive(requests[hall_floor][button_type]) {
+	if request.IsActive(requests[hallFloor][button_type]) {
 		return config.LOW_COST
 	}
 
-	var cost int = 0
+	var cost = 0
 	if is_obstructed {
 		cost = cost + config.MAJOR_COST
 	}
-	hall_distance, hall_dir := getCostBetweenFloors(floor, hall_floor)
+	hallDistance, hallDir := getCostBetweenFloors(floor, hallFloor)
 	// Unless obstructed we define 0 cost to move to current floor.
-	if hall_distance == 0 {
+	if hallDistance == 0 {
 		return cost
 	}
 
-	cost = cost + hall_distance
-	for request_floor := 0; request_floor < config.N_FLOORS; request_floor++ {
-		floor_distance, floor_dir := getCostBetweenFloors(floor, request_floor)
+	cost = cost + hallDistance
+	for requestFloor := 0; requestFloor < config.N_FLOORS; requestFloor++ {
+		floorDistance, floor_dir := getCostBetweenFloors(floor, requestFloor)
 		// Any active request in the direction we need to go means less cost while
 		// requests in the opposite direction mean additional cost.
 		// This does not take into account the difference between a HallUp and HallDown request
-		if request.IsActive(requests[request_floor][elevio.BT_Cab]) ||
-			request.IsActive(requests[request_floor][elevio.BT_HallDown]) ||
-			request.IsActive(requests[request_floor][elevio.BT_HallUp]) {
-			if floor_dir == hall_dir {
-				cost = cost - floor_distance
+		if request.IsActive(requests[requestFloor][elevio.BT_Cab]) ||
+			request.IsActive(requests[requestFloor][elevio.BT_HallDown]) ||
+			request.IsActive(requests[requestFloor][elevio.BT_HallUp]) {
+			if floor_dir == hallDir {
+				cost = cost - floorDistance
 			} else {
-				cost = cost + floor_distance
+				cost = cost + floorDistance
 			}
 		}
 	}
 
 	// Add or subtract 2 since that is the number of floor changes needed to
 	// be at the same floor with the opposite direction.
-	if direction == hall_dir {
+	if direction == hallDir {
 		cost = cost - 2
 	} else {
 		cost = cost + 2

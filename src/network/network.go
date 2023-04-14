@@ -23,8 +23,8 @@ var ConnectedNodes []string
 
 var LastRequestUpdateTime time.Time
 
-// Used to disable broadcasting of state prior to resynchronization with the network
-var EnableBroadcast = true
+// Used to intermittently disable use of local state info for actions during resynchronization with network.
+var IsSynchronized = true
 
 // Only needs to be determined once on startup
 var LocalID string
@@ -35,12 +35,16 @@ type SyncMessage struct {
 }
 
 type SyncState struct {
-	Floor             int
-	Direction         elevio.MotorDirection
-	IsObstructed      bool
+	// Local elevator data
+	Floor         int
+	Direction     elevio.MotorDirection
+	IsObstructed  bool
+	LocalRequests [config.N_FLOORS][config.N_BUTTONS]request.RequestState
+
+	// Metadata for node synchronization
+	IsSynchronized    bool
 	GlobalCabOrders   map[string]([config.N_FLOORS]request.RequestState)
 	RequestUpdateTime time.Time
-	LocalRequests     [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 }
 
 func GetOtherConnectedNodes() []string {
@@ -157,14 +161,18 @@ func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.Requ
 	var retval []request.RequestState
 
 	for _, node := range GetOtherConnectedNodes() {
-		totalState, ok := GlobalElevatorStates.Load(node)
+		stateAsAny, ok := GlobalElevatorStates.Load(node)
 		if ok {
-			if button == elevio.BT_Cab {
-				var state = totalState.(SyncState).GlobalCabOrders[LocalID][floor]
-				retval = append(retval, state)
-			} else {
-				var state = totalState.(SyncState).LocalRequests[floor][button]
-				retval = append(retval, state)
+			var state = stateAsAny.(SyncState)
+			// Ignore states from nodes mid way in synchronization
+			if state.IsSynchronized {
+				if button == elevio.BT_Cab {
+					var state = stateAsAny.(SyncState).GlobalCabOrders[LocalID][floor]
+					retval = append(retval, state)
+				} else {
+					var state = stateAsAny.(SyncState).LocalRequests[floor][button]
+					retval = append(retval, state)
+				}
 			}
 		}
 	}
@@ -196,7 +204,7 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 		case p := <-peerUpdateCh:
 			if len(p.Peers) == 0 {
 				// We are disconnected from the newtwork, disable broadcast.
-				EnableBroadcast = false
+				IsSynchronized = false
 			}
 			ConnectedNodes = p.Peers
 			if p.New != "" {
@@ -211,7 +219,7 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 					requestsUpdate <- newRequests
 				}
 				// We have resynchronized with the network, enable broadcast.
-				EnableBroadcast = true
+				IsSynchronized = true
 			}
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
@@ -226,10 +234,8 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed 
 	syncTxCh := make(chan SyncMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
-		if EnableBroadcast {
-			var cabOrders = GetCabOrdersFromNetwork()
-			syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, cabOrders, LastRequestUpdateTime, *requests}}
-		}
+		var cabOrders = GetCabOrdersFromNetwork()
+		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed, *requests, IsSynchronized, cabOrders, LastRequestUpdateTime}}
 		time.Sleep(config.UPDATE_DELAY)
 	}
 }
