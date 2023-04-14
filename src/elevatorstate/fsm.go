@@ -7,6 +7,7 @@ import (
 	"Elevator/network"
 	"Elevator/request"
 	"fmt"
+	"strconv"
 )
 
 var CheapestRequests [config.N_FLOORS][config.N_BUTTONS]bool
@@ -134,7 +135,7 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 			}
 
 		case <-elevator.DoorTimer.timer.C:
-			log("DoorTimer")
+			// log("DoorTimer")
 			if elevator.Obstruction {
 				elevatorUnavailableCh <- true
 			} else {
@@ -142,7 +143,7 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 			}
 
 		case <-elevator.MotorStopTimer.timer.C:
-			log("Triggered motor stop timer")
+			log("Triggered motor stop timer " + strconv.Itoa(int(elevator.State)))
 			switch elevator.State {
 			case Moving:
 				elevator.State = MotorStop
@@ -161,7 +162,7 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 				elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
 		case updatedRequests := <-requestsUpdatedCh:
-			log("Updated Requests")
+			// log("Updated Requests")
 			elevator.Requests = updatedRequests
 			setButtonLights(elevator)
 

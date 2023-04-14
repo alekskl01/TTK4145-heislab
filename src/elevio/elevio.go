@@ -81,7 +81,7 @@ func PollButtons(receiver chan<- ButtonEvent) {
 			for b := ButtonType(0); b < 3; b++ {
 				v := GetButton(b, f)
 				if v != prev[f][b] && v {
-					log("Button type: " + strconv.Itoa(int(b)) + " for floor: " + strconv.Itoa(f) + " pressed")
+					// log("Button type: " + strconv.Itoa(int(b)) + " for floor: " + strconv.Itoa(f) + " pressed")
 					receiver <- ButtonEvent{f, ButtonType(b)}
 				}
 				prev[f][b] = v
@@ -96,7 +96,7 @@ func PollFloorSensor(receiver chan<- int) {
 		time.Sleep(config.ELEVIO_POLL_RATE)
 		v := GetFloor()
 		if v != prev && v != -1 {
-			log("floor sensor triggered at floor: " + strconv.Itoa(v))
+			// log("floor sensor triggered at floor: " + strconv.Itoa(v))
 			receiver <- v
 		}
 		prev = v
