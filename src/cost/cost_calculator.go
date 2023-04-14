@@ -1,5 +1,6 @@
-package costcalculator
-
+// The job of the this package is calculating a comparable 'cost'
+// of fulfilling hall orders for specific nodes.
+package cost
 import (
 	"Elevator/config"
 	"Elevator/elevio"

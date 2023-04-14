@@ -7,11 +7,22 @@ Aleksander (the shady one):
   Function to return all active elevators, and to get list of orderstates for specific ordertype for all elevators.
   Networking appears to not work.
  
- Elias (the one and only):
+ias (the one and only):
   Cost function for assigning orders using information about local elevator state and states of other elevators. 
   Kun hall orders blir bestemt behandlet, mens cab orders må ta del i beregningen.
   
 Someone (pls just anybody):
 Bugs
-Waits about 6 seconds when an order is recieved in idle mode.
-Crashes when arriving at floor with multiple orders and has another order to deal with.
+If all elevators disconnects at the same time, the request matrix ix messed up
+check if elevator was just connected when syncronizing (ignore it), when connecting to network
+if all elevators have the same timestamp, not all elevators get the same order matrix when resyncronizing
+
+
+sudo iptables -A INPUT -p tcp --dport 15657 -j ACCEPT
+sudo iptables -A INPUT -p tcp --sport 15657 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 12345 -j ACCEPT
+sudo iptables -A INPUT -p tcp --sport 12345 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 11111 -j ACCEPT
+sudo iptables -A INPUT -p tcp --sport 11111 -j ACCEPT
+
+sudo iptables -A INPUT -j DROP
