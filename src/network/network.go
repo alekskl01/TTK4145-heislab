@@ -194,25 +194,21 @@ func GetID() string {
 	return (localIP + ":" + strconv.Itoa(config.Port))
 }
 
-func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
-	LastRequestUpdateTime = time.Now()
+func PeerUpdateReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
 	go peers.Transmitter(config.PEER_MANAGEMENT_PORT, LocalID, peerTxEnable)
 	peerUpdateCh := make(chan peers.PeerUpdate)
-	syncRxCh := make(chan SyncMessage)
 	go peers.Receiver(config.PEER_MANAGEMENT_PORT, peerUpdateCh)
-	go bcast.Receiver(config.BROADCAST_PORT, syncRxCh)
 	for {
 		select {
 		case p := <-peerUpdateCh:
 			if len(p.Peers) == 0 {
 				// We are disconnected from the newtwork, disable broadcast.
 				IsSynchronized = false
-			}
-			if IsSynchronized == false {
 				log("Disconnected from network")
 			}
+
 			ConnectedNodes = p.Peers
 			if p.New != "" {
 				hallOrders, useLocalState := GetNewestOrdersFromNetwork()
@@ -229,6 +225,16 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 				log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
 				IsSynchronized = true
 			}
+		}
+	}
+}
+
+func SyncReciever() {
+	LastRequestUpdateTime = time.Now()
+	syncRxCh := make(chan SyncMessage)
+	go bcast.Receiver(config.BROADCAST_PORT, syncRxCh)
+	for {
+		select {
 		case m := <-syncRxCh:
 			if m.ID != LocalID { // We are not interested in our own state
 				LastRequestUpdateTime = time.Now()
