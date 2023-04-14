@@ -4,7 +4,6 @@ import (
 	"Elevator/config"
 	"Elevator/elevio"
 	"Elevator/request"
-	"fmt"
 	"time"
 )
 
@@ -37,7 +36,6 @@ func (checkable_timer *CheckableTimer) Stop() {
 
 func (checkable_timer *CheckableTimer) hasTimeRemaining() bool {
 	time_left := time.Until(checkable_timer.end)
-	fmt.Println(time_left)
 	return (time_left > 0)
 }
 
