@@ -1,3 +1,4 @@
+// This file manages and keeps track of local requests, with some use of network information.
 package elevatorstate
 
 import (
@@ -100,7 +101,6 @@ func clearRequestAtFloor(elev *Elevator) {
 		servicedHallRequest = elevio.BT_HallUp
 	}
 
-	//TODO: improve code quality
 	var otherStates = network.GetRequestStatesAtIndex(elev.Floor, elevio.BT_Cab)
 	if request.OrderStatesEqualTo(request.ActiveRequest, elev.Requests[elev.Floor][elevio.BT_Cab], otherStates) {
 		elev.Requests[elev.Floor][elevio.BT_Cab] = request.DeleteRequest

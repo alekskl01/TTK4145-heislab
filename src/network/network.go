@@ -47,6 +47,10 @@ type SyncState struct {
 	RequestUpdateTime time.Time
 }
 
+func log(text string) {
+	fmt.Println("Network: " + text)
+}
+
 func GetOtherConnectedNodes() []string {
 	var retval []string
 	var allNodes = ConnectedNodes
@@ -206,6 +210,9 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 				// We are disconnected from the newtwork, disable broadcast.
 				IsSynchronized = false
 			}
+			if IsSynchronized == false {
+				log("Disconnected from network")
+			}
 			ConnectedNodes = p.Peers
 			if p.New != "" {
 				hallOrders, useLocalState := GetNewestOrdersFromNetwork()
@@ -219,6 +226,7 @@ func InitSyncReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_
 					requestsUpdate <- newRequests
 				}
 				// We have resynchronized with the network, enable broadcast.
+				log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
 				IsSynchronized = true
 			}
 		case m := <-syncRxCh:
