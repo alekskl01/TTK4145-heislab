@@ -35,7 +35,7 @@ func main() {
 	go network.PeerUpdateReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
 	go network.SyncReciever()
 	// Ensure we have more than enough time to get requests from network
-	time.Sleep(1 * time.Second)
+	time.Sleep(4 * config.UPDATE_DELAY)
 	var cabOrders = network.GetLocalCabOrdersFromNetwork()
 	// Keep in mind this also includes cab orders from another elevator,
 	// to simplify data restructuring.

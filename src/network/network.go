@@ -194,6 +194,24 @@ func GetID() string {
 	return (localIP + ":" + strconv.Itoa(config.Port))
 }
 
+func DelayedResynchronization(requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+	// Ensure we have enough time to get updated states from network
+	time.Sleep(4 * config.UPDATE_DELAY)
+	hallOrders, useLocalState := GetNewestOrdersFromNetwork()
+	if !useLocalState {
+		var newRequests = *requests
+		for floor := 0; floor < config.N_FLOORS; floor++ {
+			for button := 1; button < config.N_BUTTONS; button++ {
+				newRequests[floor][button] = hallOrders[floor][button]
+			}
+		}
+		requestsUpdate <- newRequests
+	}
+	// We have resynchronized with the network, enable broadcast.
+	log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
+	IsSynchronized = true
+}
+
 func PeerUpdateReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	// We make a channel for receiving updates on the id's of the peers that are
 	//  alive on the network
@@ -211,19 +229,7 @@ func PeerUpdateReciever(peerTxEnable <-chan bool, requestsUpdate chan<- [config.
 
 			ConnectedNodes = p.Peers
 			if p.New != "" {
-				hallOrders, useLocalState := GetNewestOrdersFromNetwork()
-				if !useLocalState {
-					var newRequests = *requests
-					for floor := 0; floor < config.N_FLOORS; floor++ {
-						for button := 1; button < config.N_BUTTONS; button++ {
-							newRequests[floor][button] = hallOrders[floor][button]
-						}
-					}
-					requestsUpdate <- newRequests
-				}
-				// We have resynchronized with the network, enable broadcast.
-				log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
-				IsSynchronized = true
+				go DelayedResynchronization(requestsUpdate, requests)
 			}
 		}
 	}
