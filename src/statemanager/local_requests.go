@@ -9,6 +9,16 @@ import (
 	"Elevator/elevatorstate"
 )
 
+func existsRequestsOnFloor(elev *elevatorstate.Elevator) bool {
+	for button := 0; button < config.N_BUTTONS; button++ {
+		if request.IsActive(elev.Requests[elev.Floor][button]) && CheapestRequests[elev.Floor][button] {
+			return true
+		}
+	}
+	return false
+}
+
+
 func existsRequestsAbove(elev *elevatorstate.Elevator) bool {
 	for floor := elev.Floor + 1; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
