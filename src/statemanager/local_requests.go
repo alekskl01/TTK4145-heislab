@@ -104,13 +104,13 @@ func clearRequestAtFloor(elev *elevatorstate.Elevator) {
 		servicedHallRequest = elevio.BT_HallUp
 	}
 
-	var otherStates = network.GetRequestStatesAtIndex(elev.Floor, elevio.BT_Cab)
+	var otherStates, _ = network.GetRequestStatesAtIndex(elev.Floor, elevio.BT_Cab)
 	if request.OrderStatesEqualTo(request.ActiveRequest, elev.Requests[elev.Floor][elevio.BT_Cab], otherStates) {
 		elev.Requests[elev.Floor][elevio.BT_Cab] = request.DeleteRequest
 	}
 	elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), elev.Floor, false)
 
-	otherStates = network.GetRequestStatesAtIndex(elev.Floor, servicedHallRequest)
+	otherStates, _ = network.GetRequestStatesAtIndex(elev.Floor, servicedHallRequest)
 	if request.OrderStatesEqualTo(request.ActiveRequest, elev.Requests[elev.Floor][servicedHallRequest], otherStates) {
 		elev.Requests[elev.Floor][servicedHallRequest] = request.DeleteRequest
 	}

@@ -47,7 +47,7 @@ type SyncState struct {
 	Floor     int
 	Direction elevio.MotorDirection
 	// Tells us at what point in the state machine the elevator is in
-	FSMState  elevatorstate.ElevatorState
+	FSMState      elevatorstate.ElevatorState
 	IsObstructed  bool
 	LocalRequests [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 
@@ -103,7 +103,7 @@ func CheckIfNodeIsConnected(id string) bool {
 // Important note: returns true if our cost is the same as the cost for other nodes,
 // this is vital to ensure that orders are handled.
 func IsHallOrderCheapest(hallFloor int, buttonType elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
-	 fsm_state *elevatorstate.ElevatorState, isObstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
+	fsm_state *elevatorstate.ElevatorState, isObstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
 	// Noone else to take it
 	if len(getOtherConnectedNodes()) == 0 {
 		return true
@@ -197,9 +197,9 @@ func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 
 // From other elevators, gets hall request states for a relevant hall button or their local version of our cab requests for cab buttons.
 // Note that cab orders are ensured to be stored by other nodes before locally being set to active.
-func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
+func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) ([]request.RequestState, bool) {
 	var indexStates []request.RequestState
-
+	var anyNotSynchronized = false
 	for _, node := range getOtherConnectedNodes() {
 		stateAsAny, ok := _globalElevatorStates.Load(node)
 		if ok {
@@ -213,10 +213,12 @@ func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.Requ
 					var state = stateAsAny.(SyncState).LocalRequests[floor][button]
 					indexStates = append(indexStates, state)
 				}
+			} else {
+				anyNotSynchronized = true
 			}
 		}
 	}
-	return indexStates
+	return indexStates, anyNotSynchronized
 }
 
 // Synchronizes this node's hall orders with the newest ones on the network,

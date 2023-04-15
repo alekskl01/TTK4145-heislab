@@ -31,7 +31,7 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 		case order := <-buttonPressEventCh:
 			floor := order.Floor
 			buttonType := order.Button
-			var otherStates = network.GetRequestStatesAtIndex(floor, buttonType)
+			var otherStates, _ = network.GetRequestStatesAtIndex(floor, buttonType)
 
 			// Prevents taking hall orders if we are not connected to the network
 			if len(otherStates) == 0 && buttonType != elevio.BT_Cab {
@@ -150,7 +150,7 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 				elevator.State = es.MotorStop
 				elevatorUnavailableCh <- true
 				if !existsRequestsBelow(elevator) && !existsRequestsAbove(elevator) {
-					var otherStates = network.GetRequestStatesAtIndex(elevator.Floor+int(elevator.Direction), elevio.BT_Cab)
+					var otherStates, _ = network.GetRequestStatesAtIndex(elevator.Floor+int(elevator.Direction), elevio.BT_Cab)
 					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab], otherStates) {
 						elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab] = request.PendingRequest
 					}
@@ -187,7 +187,7 @@ func onDoorTimeout(elevator *es.Elevator) {
 	if elevator.State == es.DoorOpen && !elevator.Obstruction {
 		if request.IsActive(elevator.Requests[floor][elevio.BT_HallDown]) {
 			if !existsRequestsAbove(elevator) {
-				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
+				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				} else {
@@ -200,7 +200,7 @@ func onDoorTimeout(elevator *es.Elevator) {
 				elevator.State = es.DoorOpen
 				return
 			} else {
-				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
+				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				} else {
@@ -211,7 +211,7 @@ func onDoorTimeout(elevator *es.Elevator) {
 			}
 		} else if request.IsActive(elevator.Requests[elevator.Floor][elevio.BT_HallUp]) {
 			if !existsRequestsBelow(elevator) {
-				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
+				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				} else {
@@ -224,7 +224,7 @@ func onDoorTimeout(elevator *es.Elevator) {
 				elevator.State = es.DoorOpen
 				return
 			} else {
-				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
+				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				} else {

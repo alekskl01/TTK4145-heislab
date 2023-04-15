@@ -14,12 +14,14 @@ func LocalRequestSynchronization(elev *elevatorstate.Elevator, requestsUpdate ch
 	for {
 		for floor := 0; floor < config.N_FLOORS; floor++ {
 			for button := 0; button < config.N_BUTTONS; button++ {
-				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.ButtonType(button))
-				var newState = request.CyclicCounter(elev.Requests, floor, elevio.ButtonType(button), otherStates)
-				if elev.Requests[floor][button] != newState {
-					var newRequests = elev.Requests
-					newRequests[floor][button] = newState
-					requestsUpdate <- newRequests
+				var otherStates, anyNotSynchronized = network.GetRequestStatesAtIndex(floor, elevio.ButtonType(button))
+				if !anyNotSynchronized {
+					var newState = request.CyclicCounter(elev.Requests, floor, elevio.ButtonType(button), otherStates)
+					if elev.Requests[floor][button] != newState {
+						var newRequests = elev.Requests
+						newRequests[floor][button] = newState
+						requestsUpdate <- newRequests
+					}
 				}
 			}
 		}
