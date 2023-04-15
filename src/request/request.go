@@ -7,13 +7,13 @@ type RequestState int
 
 const (
 	// No orders of that type given.
-	NoRequest RequestState = iota
+	NoRequest 	RequestState = 0
 	// Specific order given but not synchronized.
-	PendingRequest
+	PendingRequest  RequestState = 1
 	// Order synchronized, such that actions (lights, fulfillment) can be performed.
-	ActiveRequest
+	ActiveRequest	RequestState = 2
 	// Order fulfillment pending synchronization.
-	DeleteRequest
+	DeleteRequest	RequestState = 3
 )
 
 // Shorthand which also helps to ensure that actions are only performed after synchronization.
