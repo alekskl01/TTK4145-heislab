@@ -1,11 +1,12 @@
 // This file contains the main state machine that governs the behaviour of the local elevator
-package elevatorstate
+package statemanager
 
 import (
 	"Elevator/config"
 	"Elevator/elevio"
 	"Elevator/network"
 	"Elevator/request"
+	es "Elevator/elevatorstate" // Acronym alias used to shorten repeated code
 	"fmt"
 	"strconv"
 )
@@ -23,7 +24,7 @@ func InitCheapestRequests() {
 	}
 }
 
-func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.ButtonEvent, floorArrivalEventCh <-chan int,
+func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.ButtonEvent, floorArrivalEventCh <-chan int,
 	obstructionEventCh <-chan bool, stopButtonEventCh <-chan bool, elevatorUnavailableCh chan<- bool, requestsUpdatedCh <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	for {
 		select {
@@ -38,7 +39,7 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 			}
 
 			switch elevator.State {
-			case DoorOpen:
+			case es.DoorOpen:
 				if elevator.Floor == floor {
 					if (buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
 						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
@@ -54,17 +55,17 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 					}
 				}
 
-			case Moving:
+			case es.Moving:
 				if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
 					elevator.Requests[floor][buttonType] = request.PendingRequest
 				}
 
-			case MotorStop:
+			case es.MotorStop:
 				if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
 					elevator.Requests[floor][buttonType] = request.PendingRequest
 				}
 
-			case Idle:
+			case es.Idle:
 				if elevator.Floor == floor {
 					if (buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
 						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
@@ -75,14 +76,14 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 					}
 					elevio.SetDoorOpenLamp(true)
 					doorOpenTimer(elevator)
-					elevator.State = DoorOpen
+					elevator.State = es.DoorOpen
 				} else {
 					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
 						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 				}
 			}
-			setButtonLights(elevator)
+			es.SetButtonLights(elevator)
 
 		case newFloor := <-floorArrivalEventCh:
 			elevator.Floor = newFloor
@@ -90,36 +91,36 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 			elevio.SetFloorIndicator(newFloor)
 			switch elevator.State {
 
-			case Moving:
+			case es.Moving:
 				if shouldStop(elevator) {
 					elevio.SetMotorDirection(elevio.MD_Stop)
-					elevator.MotorStopTimer.stop()
+					elevator.MotorStopTimer.Stop()
 
 					clearRequestAtFloor(elevator)
 
 					doorOpenTimer(elevator)
-					setButtonLights(elevator)
+					es.SetButtonLights(elevator)
 
-					elevator.State = DoorOpen
+					elevator.State = es.DoorOpen
 				} else {
-					elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
+					elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 				}
 
-			case MotorStop:
-				elevator.MotorStopTimer.stop()
+			case es.MotorStop:
+				elevator.MotorStopTimer.Stop()
 
 				if shouldStop(elevator) {
 					elevio.SetMotorDirection(elevio.MD_Stop)
 					clearRequestAtFloor(elevator)
-					elevator.MotorStopTimer.stop()
+					elevator.MotorStopTimer.Stop()
 
 					doorOpenTimer(elevator)
-					setButtonLights(elevator)
+					es.SetButtonLights(elevator)
 
-					elevator.State = DoorOpen
+					elevator.State = es.DoorOpen
 				} else {
-					elevator.State = Moving
-					elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
+					elevator.State = es.Moving
+					elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 				}
 
 			}
@@ -127,14 +128,14 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 		case obstruction := <-obstructionEventCh:
 			elevator.Obstruction = obstruction
 
-			if elevator.State == DoorOpen {
+			if elevator.State == es.DoorOpen {
 				elevio.SetDoorOpenLamp(true)
 			}
-			if !elevator.DoorTimer.hasTimeRemaining() && !elevator.Obstruction {
+			if !elevator.DoorTimer.HasTimeRemaining() && !elevator.Obstruction {
 				onDoorTimeout(elevator)
 			}
 
-		case <-elevator.DoorTimer.timer.C:
+		case <-elevator.DoorTimer.Timer.C:
 			// log("DoorTimer")
 			if elevator.Obstruction {
 				elevatorUnavailableCh <- true
@@ -142,11 +143,11 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 				onDoorTimeout(elevator)
 			}
 
-		case <-elevator.MotorStopTimer.timer.C:
+		case <-elevator.MotorStopTimer.Timer.C:
 			log("Triggered motor stop timer " + strconv.Itoa(int(elevator.State)))
 			switch elevator.State {
-			case Moving:
-				elevator.State = MotorStop
+			case es.Moving:
+				elevator.State = es.MotorStop
 				elevatorUnavailableCh <- true
 				if !existsRequestsBelow(elevator) && !existsRequestsAbove(elevator) {
 					var otherStates = network.GetRequestStatesAtIndex(elevator.Floor+int(elevator.Direction), elevio.BT_Cab)
@@ -154,36 +155,36 @@ func RunStateMachine(elevator *Elevator, buttonPressEventCh <-chan elevio.Button
 						elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab] = request.PendingRequest
 					}
 				}
-				elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
+				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 
-			case MotorStop:
+			case es.MotorStop:
 				elevator.Direction = chooseDirection(elevator)
 				elevio.SetMotorDirection(elevator.Direction)
-				elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
+				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
 		case updatedRequests := <-requestsUpdatedCh:
 			// log("Updated Requests")
 			elevator.Requests = updatedRequests
-			setButtonLights(elevator)
+			es.SetButtonLights(elevator)
 
 			// Must be here to be able to confirm a new request before moving the elevator (When in idle mode), because it wil choose direction stop if not
-			if elevator.State == Idle {
+			if elevator.State == es.Idle {
 				elevator.Direction = chooseDirection(elevator)
 				elevio.SetMotorDirection(elevator.Direction)
-				elevator.State = Moving
-				elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
+				elevator.State = es.Moving
+				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
 		}
 	}
 }
 
-func onDoorTimeout(elevator *Elevator) {
+func onDoorTimeout(elevator *es.Elevator) {
 	floor := elevator.Floor
 
 	// Checks if elevator has a reason to travel in direction decided when floor
 	// was reached if uncerviced hall orders exist on the current floor, and services the hall order if not.
 
-	if elevator.State == DoorOpen && !elevator.Obstruction {
+	if elevator.State == es.DoorOpen && !elevator.Obstruction {
 		if request.IsActive(elevator.Requests[floor][elevio.BT_HallDown]) {
 			if !existsRequestsAbove(elevator) {
 				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
@@ -195,8 +196,8 @@ func onDoorTimeout(elevator *Elevator) {
 					fmt.Println()
 				}
 				doorOpenTimer(elevator)
-				setButtonLights(elevator)
-				elevator.State = DoorOpen
+				es.SetButtonLights(elevator)
+				elevator.State = es.DoorOpen
 				return
 			} else {
 				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
@@ -219,8 +220,8 @@ func onDoorTimeout(elevator *Elevator) {
 					fmt.Println()
 				}
 				doorOpenTimer(elevator)
-				setButtonLights(elevator)
-				elevator.State = DoorOpen
+				es.SetButtonLights(elevator)
+				elevator.State = es.DoorOpen
 				return
 			} else {
 				var otherStates = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
@@ -239,15 +240,15 @@ func onDoorTimeout(elevator *Elevator) {
 		elevio.SetMotorDirection(elevator.Direction)
 
 		if elevator.Direction == elevio.MD_Stop {
-			elevator.State = Idle
+			elevator.State = es.Idle
 		} else {
-			elevator.State = Moving
-			elevator.MotorStopTimer.reset(config.MOTOR_STOP_DETECTION_TIME)
+			elevator.State = es.Moving
+			elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 		}
 	}
 }
 
-func doorOpenTimer(elevator *Elevator) {
+func doorOpenTimer(elevator *es.Elevator) {
 	elevio.SetDoorOpenLamp(true)
-	elevator.DoorTimer.reset(config.DOOR_OPEN_DURATION)
+	elevator.DoorTimer.Reset(config.DOOR_OPEN_DURATION)
 }

@@ -4,6 +4,7 @@ package network
 import (
 	"Elevator/config"
 	"Elevator/cost"
+	"Elevator/elevatorstate"
 	"Elevator/elevio"
 	"Elevator/network/bcast"
 	"Elevator/network/localip"
@@ -43,8 +44,10 @@ var _globalCabOrders map[string]([config.N_FLOORS]request.RequestState)
 
 type SyncState struct {
 	// Local elevator data
-	Floor         int
-	Direction     elevio.MotorDirection
+	Floor     int
+	Direction elevio.MotorDirection
+	// Tells us at what point in the state machine the elevator is in
+	FSMState  elevatorstate.ElevatorState
 	IsObstructed  bool
 	LocalRequests [config.N_FLOORS][config.N_BUTTONS]request.RequestState
 
@@ -100,7 +103,7 @@ func CheckIfNodeIsConnected(id string) bool {
 // Important note: returns true if our cost is the same as the cost for other nodes,
 // this is vital to ensure that orders are handled.
 func IsHallOrderCheapest(hallFloor int, buttonType elevio.ButtonType, floor *int, direction *elevio.MotorDirection,
-	isObstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
+	 fsm_state *elevatorstate.ElevatorState, isObstructed *bool, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) bool {
 	// Noone else to take it
 	if len(getOtherConnectedNodes()) == 0 {
 		return true
@@ -110,14 +113,14 @@ func IsHallOrderCheapest(hallFloor int, buttonType elevio.ButtonType, floor *int
 		stateAsAny, ok := _globalElevatorStates.Load(node)
 		if ok {
 			state := stateAsAny.(SyncState)
-			cost := cost.GetCostOfHallOrder(hallFloor, buttonType, state.Floor, state.Direction, state.IsObstructed, state.LocalRequests)
+			cost := cost.GetCostOfHallOrder(hallFloor, buttonType, state.Floor, state.Direction, state.FSMState, state.IsObstructed, state.LocalRequests)
 			if cost < cheapestCost {
 				cheapestCost = cost
 			}
 		}
 	}
 
-	ourCost := cost.GetCostOfHallOrder(hallFloor, buttonType, *floor, *direction, *isObstructed, *requests)
+	ourCost := cost.GetCostOfHallOrder(hallFloor, buttonType, *floor, *direction, *fsm_state, *isObstructed, *requests)
 	return ourCost <= cheapestCost
 }
 
@@ -193,6 +196,7 @@ func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 }
 
 // From other elevators, gets hall request states for a relevant hall button or their local version of our cab requests for cab buttons.
+// Note that cab orders are ensured to be stored by other nodes before locally being set to active.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) []request.RequestState {
 	var indexStates []request.RequestState
 
@@ -277,16 +281,16 @@ func SyncReciever() {
 	}
 }
 
-func BroadcastState(floor *int, direction *elevio.MotorDirection, is_obstructed *bool,
-	 requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+func BroadcastState(floor *int, direction *elevio.MotorDirection, state *elevatorstate.ElevatorState, is_obstructed *bool,
+	requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	_globalCabOrders = make(map[string]([config.N_FLOORS]request.RequestState))
 	syncTxCh := make(chan SyncMessage)
 	go bcast.Transmitter(config.BROADCAST_PORT, syncTxCh)
 	for {
 		// Update global cab orders before broadcasting.
 		getCabOrdersFromNetwork()
-		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *is_obstructed,
-			 *requests, _isSynchronized, _globalCabOrders, _lastRequestUpdateTime}}
+		syncTxCh <- SyncMessage{LocalID, SyncState{*floor, *direction, *state, *is_obstructed,
+			*requests, _isSynchronized, _globalCabOrders, _lastRequestUpdateTime}}
 		time.Sleep(config.UPDATE_DELAY)
 	}
 }

@@ -1,14 +1,15 @@
 // This file manages and keeps track of local requests, with some use of network information.
-package elevatorstate
+package statemanager
 
 import (
 	"Elevator/config"
 	"Elevator/elevio"
 	"Elevator/network"
 	"Elevator/request"
+	"Elevator/elevatorstate"
 )
 
-func existsRequestsAbove(elev *Elevator) bool {
+func existsRequestsAbove(elev *elevatorstate.Elevator) bool {
 	for floor := elev.Floor + 1; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
 			if request.IsActive(elev.Requests[floor][button]) && CheapestRequests[floor][button] {
@@ -19,7 +20,7 @@ func existsRequestsAbove(elev *Elevator) bool {
 	return false
 }
 
-func existsRequestsBelow(elev *Elevator) bool {
+func existsRequestsBelow(elev *elevatorstate.Elevator) bool {
 	for floor := 0; floor < elev.Floor; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
 			if request.IsActive(elev.Requests[floor][button]) && CheapestRequests[floor][button] {
@@ -30,7 +31,7 @@ func existsRequestsBelow(elev *Elevator) bool {
 	return false
 }
 
-func chooseDirection(elev *Elevator) elevio.MotorDirection {
+func chooseDirection(elev *elevatorstate.Elevator) elevio.MotorDirection {
 	switch elev.Direction {
 
 	case elevio.MD_Stop:
@@ -61,7 +62,7 @@ func chooseDirection(elev *Elevator) elevio.MotorDirection {
 	return elevio.MD_Stop
 }
 
-func shouldStop(elev *Elevator) bool {
+func shouldStop(elev *elevatorstate.Elevator) bool {
 	var floor int = elev.Floor
 
 	switch elev.Direction {
@@ -81,7 +82,7 @@ func shouldStop(elev *Elevator) bool {
 
 // Worth noting that this function takes into account the requests of other nodes,
 // in order to properly trigger cascading deletion for all nodes.
-func clearRequestAtFloor(elev *Elevator) {
+func clearRequestAtFloor(elev *elevatorstate.Elevator) {
 	var servicedHallRequest elevio.ButtonType
 
 	if request.IsActive(elev.Requests[elev.Floor][elevio.BT_HallDown]) &&

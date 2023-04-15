@@ -2,8 +2,10 @@
 // of fulfilling hall orders for specific nodes, so that the ideal node
 // for fulfulling an order can be determined.
 package cost
+
 import (
 	"Elevator/config"
+	"Elevator/elevatorstate"
 	"Elevator/elevio"
 	"Elevator/request"
 	"fmt"
@@ -30,7 +32,7 @@ func getCostBetweenFloors(current_floor int, floor int) (int, elevio.MotorDirect
 // Gives an approximate "cost" of taking a hall order for an elevator.
 // Being perfectly accurate and efficient is not important, while consistency is.
 func GetCostOfHallOrder(hallFloor int, button_type elevio.ButtonType, floor int, direction elevio.MotorDirection,
-	is_obstructed bool, requests [config.N_FLOORS][config.N_BUTTONS]request.RequestState) int {
+	fsm_state elevatorstate.ElevatorState, is_obstructed bool, requests [config.N_FLOORS][config.N_BUTTONS]request.RequestState) int {
 	if button_type == elevio.BT_Cab {
 		// Assume some kind of unexpected bug, ensure cost is always highest
 		log("Tried to calculate cost of a cab order.")
@@ -45,6 +47,16 @@ func GetCostOfHallOrder(hallFloor int, button_type elevio.ButtonType, floor int,
 	var cost = 0
 	if is_obstructed {
 		cost = cost + config.MAJOR_COST
+	}
+
+	switch fsm_state {
+	case elevatorstate.DoorOpen:
+		// Smallest possible increment
+		cost = cost + 1
+		break
+	case elevatorstate.MotorStop:
+		// Stopped motor can't fulfill orders.
+		return config.HIGH_COST
 	}
 	hallDistance, hallDir := getCostBetweenFloors(floor, hallFloor)
 	// Unless obstructed we define 0 cost to move to current floor.

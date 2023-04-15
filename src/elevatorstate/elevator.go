@@ -1,5 +1,6 @@
-// This file manages and keeps track of the local elevator on a low level,
-// and servers as a middleman between the main state machine and elevio
+// This package / file manages and keeps track of the state of the local elevator on a low level,
+// and servers as a middleman between the main state machine and elevio.
+// This is separate from the statemanager package to allow use to analyze the elevator state elsewhere.
 package elevatorstate
 
 import (
@@ -8,7 +9,7 @@ import (
 	"Elevator/request"
 	"time"
 )
-
+// Primary state in the state machine
 type ElevatorState int
 
 const (
@@ -20,7 +21,7 @@ const (
 
 // Expanded timer object that is needed to check remaining time left.
 type CheckableTimer struct {
-	timer *time.Timer
+	Timer *time.Timer
 	end   time.Time
 }
 
@@ -28,16 +29,16 @@ func createNewCheckableTimer(t time.Duration) *CheckableTimer {
 	return &CheckableTimer{time.NewTimer(t), time.Now().Add(t)}
 }
 
-func (checkableTimer *CheckableTimer) reset(t time.Duration) {
-	checkableTimer.timer.Reset(t)
+func (checkableTimer *CheckableTimer) Reset(t time.Duration) {
+	checkableTimer.Timer.Reset(t)
 	checkableTimer.end = time.Now().Add(t)
 }
 
-func (checkableTimer *CheckableTimer) stop() {
-	checkableTimer.timer.Stop()
+func (checkableTimer *CheckableTimer) Stop() {
+	checkableTimer.Timer.Stop()
 }
 
-func (checkable_timer *CheckableTimer) hasTimeRemaining() bool {
+func (checkable_timer *CheckableTimer) HasTimeRemaining() bool {
 	time_left := time.Until(checkable_timer.end)
 	return (time_left > 0)
 }
@@ -61,9 +62,9 @@ func InitializeElevator() Elevator {
 
 	//Timers
 	elevator.DoorTimer = *createNewCheckableTimer(config.DOOR_OPEN_DURATION)
-	elevator.DoorTimer.stop()
+	elevator.DoorTimer.Stop()
 	elevator.MotorStopTimer = *createNewCheckableTimer(config.MOTOR_STOP_DETECTION_TIME)
-	elevator.MotorStopTimer.stop()
+	elevator.MotorStopTimer.Stop()
 
 	//Make sure elevator is not between floors
 	elevator.Direction = elevio.MD_Down
@@ -73,7 +74,7 @@ func InitializeElevator() Elevator {
 	return *elevator
 }
 
-func setButtonLights(elevator *Elevator) {
+func SetButtonLights(elevator *Elevator) {
 	for floor := 0; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
 			if request.ShouldActivateButtonLight(elevator.Requests[floor][button]) {
