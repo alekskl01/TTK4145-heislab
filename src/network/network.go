@@ -324,23 +324,27 @@ func BroadcastState(floor *int, direction *elevio.MotorDirection, state *elevato
 }
 
 // Used to debug network failures.
-func NetworkCheck(requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+func NetworkCheck(requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState, stopDriverCh <-chan bool) {
 	for {
-		fmt.Println("-----------------------------")
-		fmt.Println("Network states:")
-		PrintSyncMap(_globalElevatorStates)
-		fmt.Println("Connected nodes:")
-		fmt.Printf("%#v", getOtherConnectedNodes())
-		fmt.Println()
-		fmt.Println("Global Cab Orders:")
-		fmt.Printf("%#v", _globalCabOrders)
-		fmt.Println()
-		fmt.Println("-----------------------------")
-		fmt.Println("Request matrix:")
-		fmt.Printf("%#v", requests)
-		fmt.Println()
-		fmt.Println("-----------------------------")
-		time.Sleep(5 * time.Second)
+		select {
+		case stop := <-stopDriverCh:
+			if stop {
+				fmt.Println("-----------------------------")
+				fmt.Println("Network states:")
+				PrintSyncMap(_globalElevatorStates)
+				fmt.Println("Connected nodes:")
+				fmt.Printf("%#v", getOtherConnectedNodes())
+				fmt.Println()
+				fmt.Println("Global Cab Orders:")
+				fmt.Printf("%#v", _globalCabOrders)
+				fmt.Println()
+				fmt.Println("-----------------------------")
+				fmt.Println("Request matrix:")
+				fmt.Printf("%#v", requests)
+				fmt.Println()
+				fmt.Println("-----------------------------")
+			}
+		}
 	}
 }
 

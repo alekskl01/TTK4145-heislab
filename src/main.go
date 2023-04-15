@@ -15,15 +15,18 @@ import (
 
 func main() {
 	fmt.Println("Starting elevator")
+
+	// Allows port to be specified when running the application using -port 12345
 	port := flag.Int("port", 0, "")
 	flag.Parse()
 	if *port != 0 {
 		config.Port = *port
 	}
+
 	network.LocalID = network.GetID()
 	elevio.Init()
 	elevator := elevatorstate.InitializeElevator()
-
+	
 	buttonDriverCh := make(chan elevio.ButtonEvent)
 	floorDriverCh := make(chan int)
 	obstructionDriverCh := make(chan bool)
@@ -31,7 +34,8 @@ func main() {
 	requestsUpdateCh := make(chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState)
 	peerTxEnableCh := make(chan bool)
 
-	go network.NetworkCheck(&elevator.Requests)
+	// Prints network synchronization information when the stop button is pressed.
+	go network.NetworkCheck(&elevator.Requests, stopDriverCh)
 
 	// Start recieving networking synchronization states and connection information.
 	go network.PeerUpdateReciever(peerTxEnableCh, requestsUpdateCh, &elevator.Requests)
