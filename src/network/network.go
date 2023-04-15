@@ -170,13 +170,16 @@ func GetLocalCabOrdersFromNetwork() []request.RequestState {
 // In such a case the network is standardized to use the newest synchronized state.
 // Note: it is important to iterate through the list of nodes in a consistently sorted order,
 // including this node to avoid errors when multiple nodes have the same update time.
-func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, bool) {
+func getNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.RequestState, bool, bool) {
 	var nodes = getOtherConnectedNodes()
 	nodes = append(nodes, LocalID)
 	sort.Strings(nodes)
 	var newestTime = time.Time{}
 	var newestState SyncState
+	// Is the local state the newest one?
 	var useLocalState = false
+	// Do we only have access to the local state?
+	var onlyLocalState = true
 	for _, node := range nodes {
 		if node == LocalID {
 			if _lastRequestUpdateTime.After(newestTime) {
@@ -187,12 +190,13 @@ func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 			state, ok := _globalElevatorStates.Load(node)
 			if ok && (state.(SyncState)).RequestUpdateTime.After(newestTime) {
 				useLocalState = false
+				onlyLocalState = false
 				newestState = state.(SyncState)
 				newestTime = newestState.RequestUpdateTime
 			}
 		}
 	}
-	return newestState.LocalRequests, useLocalState
+	return newestState.LocalRequests, useLocalState, onlyLocalState
 }
 
 // From other elevators, gets hall request states for a relevant hall button or their local version of our cab requests for cab buttons.
@@ -224,27 +228,30 @@ func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) ([]request.Req
 
 // Synchronizes this node's hall orders with the newest ones on the network,
 // allowing for this node take part in regular state synchronization.
-func DelayedResynchronization(requestsUpdateCh chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+func delayedResynchronization(requestsUpdateCh chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState, requests *[config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	// Ensure we have enough time to get updated states from network
 	time.Sleep(config.SIGNIFICANT_DELAY)
 	if !_isSynchronized {
 		log("Attempting resynchronization")
-		hallOrders, useLocalState := GetNewestRequestsFromNetwork()
-		if !useLocalState {
-			log("Synching to external state")
-			var newRequests = *requests
-			for floor := 0; floor < config.N_FLOORS; floor++ {
-				for button := 0; button < (config.N_BUTTONS - 1); button++ {
-					newRequests[floor][button] = hallOrders[floor][button]
+		hallOrders, useLocalState, onlyLocalState := getNewestRequestsFromNetwork()
+		// Ensure that we have had the opportunity to get at least 1 state from another node.
+		if !onlyLocalState {
+			if !useLocalState {
+				log("Synching to external state")
+				var newRequests = *requests
+				for floor := 0; floor < config.N_FLOORS; floor++ {
+					for button := 0; button < (config.N_BUTTONS - 1); button++ {
+						newRequests[floor][button] = hallOrders[floor][button]
+					}
 				}
+				requestsUpdateCh <- newRequests
+			} else {
+				log("Synching to own state")
 			}
-			requestsUpdateCh <- newRequests
-		} else {
-			log("Synching to own state")
+			// We have resynchronized with the network, enable regular state synchronization.
+			log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
+			_isSynchronized = true
 		}
-		// We have resynchronized with the network, enable regular state synchronization.
-		log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
-		_isSynchronized = true
 	}
 }
 
@@ -261,11 +268,16 @@ func PeerUpdateReciever(peerTxEnableCh <-chan bool, requestsUpdateCh chan<- [con
 			if len(getOtherConnectedNodes()) == 0 {
 				// We are disconnected from the newtwork, disable broadcast.
 				_isSynchronized = false
+				_globalElevatorStates = sync.Map{}
 				log("Disconnected from network")
 			}
 			if p.New != "" && p.New != LocalID {
 				log("New peer detected, resynchronizing.")
-				go DelayedResynchronization(requestsUpdateCh, requests)
+				go delayedResynchronization(requestsUpdateCh, requests)
+			}
+			// This should come up very rarely, but serves to ensure that this node tries to resynchronize.
+			if (p.New == "" || p.New == LocalID) && !_isSynchronized {
+				go delayedResynchronization(requestsUpdateCh, requests)
 			}
 		}
 	}
