@@ -22,7 +22,7 @@ func getNeededFloorTraversal(current_floor int, target_floor int) (int, elevio.M
 	if difference == 0 {
 		return 0, elevio.MD_Stop
 	}
-	direction := elevio.MotorDirection(elevio.MD_Down)
+	var direction = elevio.MD_Down
 	if difference < 0 {
 		difference = difference * -1
 		direction = elevio.MD_Up
@@ -82,7 +82,7 @@ func GetCostOfHallOrder(hallFloor int, button_type elevio.ButtonType, floor int,
 			}
 		}
 	}
-	
+
 	// Add or subtract 2 since that is the number of floor changes needed to change directions
 	// Easier to move in direction we are already moving in.
 	if direction != elevio.MD_Stop {

@@ -12,16 +12,16 @@ import (
 
 // Contains a continously updated overview of which requests are cheapest
 // for the local node to take,
-var CheapestRequests [config.N_FLOORS][config.N_BUTTONS]bool
+var SelfAssignedRequests [config.N_FLOORS][config.N_BUTTONS]bool
 
 func log(text string) {
 	fmt.Println("FSM: " + text)
 }
 
-func InitCheapestRequests() {
+func InitSelfAssignedRequests() {
 	// Cab orders are always cheapest for us to take
 	for floor := 0; floor < config.N_FLOORS; floor++ {
-		CheapestRequests[floor][config.N_BUTTONS-1] = true
+		SelfAssignedRequests[floor][config.N_BUTTONS-1] = true
 	}
 }
 

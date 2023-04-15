@@ -26,7 +26,7 @@ func main() {
 	network.LocalID = network.GetID()
 	elevio.Init()
 	elevator := elevatorstate.InitializeElevator()
-	
+
 	buttonDriverCh := make(chan elevio.ButtonEvent)
 	floorDriverCh := make(chan int)
 	obstructionDriverCh := make(chan bool)
@@ -61,9 +61,9 @@ func main() {
 	// Information from the elevator system and regarding local requests is available and can be broadcasted.
 	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.State, &elevator.Obstruction, &elevator.Requests)
 
-	// Make information about cheapest requests to take available to the main state machine.
-	statemanager.InitCheapestRequests()
-	go synchronizer.UpdateCheapestRequests(&elevator.Floor, &elevator.Direction, &elevator.State, &elevator.Obstruction, &elevator.Requests)
+	// Make information about cheapest requests for us to take available to the main state machine.
+	statemanager.InitSelfAssignedRequests()
+	go synchronizer.UpdateSelfAssignedRequests(&elevator.Floor, &elevator.Direction, &elevator.State, &elevator.Obstruction, &elevator.Requests)
 	// This begins the main elevator operation
 	go statemanager.RunStateMachine(&elevator, buttonDriverCh, floorDriverCh, obstructionDriverCh, requestsUpdateCh)
 	for {
