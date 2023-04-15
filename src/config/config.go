@@ -36,6 +36,7 @@ const IP = "localhost"
 
 var Port = DEFAULT_PORT
 
+// Address to connect to elevator server.
 func GetAddress() string {
 	return IP + ":" + strconv.Itoa(Port)
 }

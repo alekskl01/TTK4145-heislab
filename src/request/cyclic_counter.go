@@ -40,6 +40,7 @@ func OrderStatesEqualTo(checkState RequestState, myState RequestState, otherStat
 }
 
 // Describes sequential iteration of request states to keep orders synchronized and allow them to be fulfilled.
+// The lifecycle of a request is incremented as it is synchronized and fulfilled.
 func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, floor int, button_type elevio.ButtonType, otherState []RequestState) RequestState {
 
 	myState := requests[floor][button_type]

@@ -11,6 +11,8 @@ import (
 	"strconv"
 )
 
+// Contains a continously updated overview of which requests are cheapest
+// for the local node to take,
 var CheapestRequests [config.N_FLOORS][config.N_BUTTONS]bool
 
 func log(text string) {
@@ -25,7 +27,7 @@ func InitCheapestRequests() {
 }
 
 func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.ButtonEvent, floorArrivalEventCh <-chan int,
-	obstructionEventCh <-chan bool, stopButtonEventCh <-chan bool, elevatorUnavailableCh chan<- bool, requestsUpdatedCh <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
+	obstructionEventCh <-chan bool, requestsUpdatedCh <-chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	for {
 		select {
 		case order := <-buttonPressEventCh:
@@ -133,9 +135,7 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 
 		case <-elevator.DoorTimer.Timer.C:
 			// log("DoorTimer")
-			if elevator.Obstruction {
-				elevatorUnavailableCh <- true
-			} else {
+			if !elevator.Obstruction {
 				onDoorTimeout(elevator)
 			}
 
@@ -144,7 +144,6 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 			switch elevator.State {
 			case es.Moving:
 				elevator.State = es.MotorStop
-				elevatorUnavailableCh <- true
 				if !existsRequestsBelow(elevator) && !existsRequestsAbove(elevator) {
 					var otherStates, _ = network.GetRequestStatesAtIndex(elevator.Floor+int(elevator.Direction), elevio.BT_Cab)
 					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab], otherStates) {

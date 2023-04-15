@@ -23,36 +23,44 @@ func main() {
 	network.LocalID = network.GetID()
 	elevio.Init()
 	elevator := elevatorstate.InitializeElevator()
-	drv_buttons := make(chan elevio.ButtonEvent)
-	drv_floors := make(chan int)
-	drv_obstr := make(chan bool)
-	drv_stop := make(chan bool)
-	FSM_ElevatorUnavailable := make(chan bool, config.FSM_CHANNEL_BUFFER_SIZE)
-	requestsUpdate := make(chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState)
-	peerTxEnable := make(chan bool)
+	buttonDriverCh := make(chan elevio.ButtonEvent)
+	floorDriverCh := make(chan int)
+	obstructionDriverCh := make(chan bool)
+	stopDriverCh := make(chan bool)
+	requestsUpdateCh := make(chan [config.N_FLOORS][config.N_BUTTONS]request.RequestState)
+	peerTxEnableCh := make(chan bool)
 
-	// Initialize with requests from network (if any)
 	go network.NetworkCheck(&elevator.Requests)
-	go network.PeerUpdateReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
+
+	// Start recieving networking synchronization states and connection information.
+	go network.PeerUpdateReciever(peerTxEnableCh, requestsUpdateCh, &elevator.Requests)
 	go network.SyncReciever()
-	// Ensure we have more than enough time to get requests from network
+	// Ensure we have more than enough time to get requests from network.
 	time.Sleep(config.SIGNIFICANT_DELAY)
 
-	// Get any cab order we had previously from the network
+	// Get any cab order this node had prior to restart from the network.
 	var cabOrders = network.GetLocalCabOrdersFromNetwork()
 	for floor := 0; floor < config.N_FLOORS; floor++ {
 		elevator.Requests[floor][elevio.BT_Cab] = cabOrders[floor]
 	}
-	go elevio.PollButtons(drv_buttons)
-	go elevio.PollFloorSensor(drv_floors)
-	go elevio.PollObstructionSwitch(drv_obstr)
-	go elevio.PollStopButton(drv_stop)
 
-	go synchronizer.LocalRequestSynchronization(&elevator, requestsUpdate)
+	// Start taking inputs from the elevator system.
+	go elevio.PollButtons(buttonDriverCh)
+	go elevio.PollFloorSensor(floorDriverCh)
+	go elevio.PollObstructionSwitch(obstructionDriverCh)
+	go elevio.PollStopButton(stopDriverCh)
+
+	// Start the lifecycles of local requests
+	go synchronizer.LocalRequestSynchronization(&elevator, requestsUpdateCh)
+
+	// Information from the elevator system and regarding local requests is available and can be broadcasted.
+	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.State, &elevator.Obstruction, &elevator.Requests)
+
+	// Make information about cheapest requests to take available to the main state machine.
 	statemanager.InitCheapestRequests()
 	go synchronizer.UpdateCheapestRequests(&elevator.Floor, &elevator.Direction, &elevator.State, &elevator.Obstruction, &elevator.Requests)
-	go network.BroadcastState(&elevator.Floor, &elevator.Direction, &elevator.State, &elevator.Obstruction, &elevator.Requests)
-	go statemanager.RunStateMachine(&elevator, drv_buttons, drv_floors, drv_obstr, drv_stop, FSM_ElevatorUnavailable, requestsUpdate)
+	// This begins the main elevator operation
+	go statemanager.RunStateMachine(&elevator, buttonDriverCh, floorDriverCh, obstructionDriverCh, requestsUpdateCh)
 	for {
 		time.Sleep(time.Second * 20)
 	}

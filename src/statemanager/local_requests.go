@@ -1,4 +1,5 @@
 // This file manages and keeps track of local requests, with some use of network information.
+// See the request package / file for more details on how individual requests are structured.
 package statemanager
 
 import (

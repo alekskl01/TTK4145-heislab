@@ -1,3 +1,5 @@
+// Continously updates the state of all local requests
+// and which requests are cheapest for the local node to take.
 package synchronizer
 
 import (

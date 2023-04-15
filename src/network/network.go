@@ -32,7 +32,8 @@ var _isSynchronized = false
 
 // Only needs to be determined once on startup,
 // consists of the network local ip of this machine and the port being used for
-// elevator communication on startup.
+// elevator communication on startup. On the form of a standard address,
+// but used as a unique node identifier that should stay the same on restart.
 var LocalID string
 
 type SyncMessage struct {
@@ -179,6 +180,7 @@ func getNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 	// Is the local state the newest one?
 	var useLocalState = false
 	// Do we only have access to the local state?
+	// If so synchronization should be delayed
 	var onlyLocalState = true
 	for _, node := range nodes {
 		if node == LocalID {
@@ -205,7 +207,7 @@ func getNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 // Note that cab orders are ensured to be stored by other nodes before locally being set to active.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) ([]request.RequestState, bool) {
 	var indexStates []request.RequestState
-	// Important to avoid
+	// Important to avoid updating request states when any node is resynchronizing
 	var anyNotSynchronized = false
 	for _, node := range getOtherConnectedNodes() {
 		stateAsAny, ok := _globalElevatorStates.Load(node)
@@ -271,6 +273,7 @@ func PeerUpdateReciever(peerTxEnableCh <-chan bool, requestsUpdateCh chan<- [con
 				// We are disconnected from the newtwork, disable broadcast.
 				_isSynchronized = false
 				// Copied from https://stackoverflow.com/questions/49355345/how-to-clean-a-sync-map
+				// This method of clearing the map is chosen to be threadsafe
 				_globalElevatorStates.Range(func(key interface{}, value interface{}) bool {
 					_globalElevatorStates.Delete(key)
 					return true
