@@ -268,7 +268,11 @@ func PeerUpdateReciever(peerTxEnableCh <-chan bool, requestsUpdateCh chan<- [con
 			if len(getOtherConnectedNodes()) == 0 {
 				// We are disconnected from the newtwork, disable broadcast.
 				_isSynchronized = false
-				_globalElevatorStates = sync.Map{}
+				// Copied from https://stackoverflow.com/questions/49355345/how-to-clean-a-sync-map
+				_globalElevatorStates.Range(func(key interface{}, value interface{}) bool {
+					_globalElevatorStates.Delete(key)
+					return true
+				})
 				log("Disconnected from network")
 			}
 			if p.New != "" && p.New != LocalID {
