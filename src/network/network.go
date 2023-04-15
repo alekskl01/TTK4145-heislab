@@ -28,7 +28,7 @@ var ConnectedNodes []string
 var _lastRequestUpdateTime = time.Time{}
 
 // Used to intermittently disable use of local state info for actions during resynchronization with network.
-var _isSynchronized = true
+var _isSynchronized = false
 
 // Only needs to be determined once on startup,
 // consists of the network local ip of this machine and the port being used for
