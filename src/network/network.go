@@ -188,11 +188,13 @@ func getNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 			}
 		} else {
 			state, ok := _globalElevatorStates.Load(node)
-			if ok && (state.(SyncState)).RequestUpdateTime.After(newestTime) {
-				useLocalState = false
+			if ok {
 				onlyLocalState = false
-				newestState = state.(SyncState)
-				newestTime = newestState.RequestUpdateTime
+				if (state.(SyncState)).RequestUpdateTime.After(newestTime) {
+					useLocalState = false
+					newestState = state.(SyncState)
+					newestTime = newestState.RequestUpdateTime
+				}
 			}
 		}
 	}
