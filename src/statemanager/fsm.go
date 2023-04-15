@@ -8,7 +8,6 @@ import (
 	"Elevator/network"
 	"Elevator/request"
 	"fmt"
-	"strconv"
 )
 
 // Contains a continously updated overview of which requests are cheapest
@@ -35,7 +34,7 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 			buttonType := order.Button
 			var otherStates, _ = network.GetRequestStatesAtIndex(floor, buttonType)
 
-			// Prevents taking hall orders if we are not connected to the network
+			// Prevents taking hall orders if we are not connected to the network, part of ensuring proper resynchronization
 			if len(otherStates) == 0 && buttonType != elevio.BT_Cab {
 				break
 			}
@@ -43,17 +42,18 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 			switch elevator.State {
 			case es.DoorOpen:
 				if elevator.Floor == floor {
+					// If the elevator is already at the floor where the order was placed, we only add the order if it is a hall order,
+					// otherwise we just open the door again.
 					if ((buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
 						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up)) &&
 						request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+
 						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 					openDoor(elevator)
 					elevator.State = es.DoorOpen
-				} else {
-					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
-						elevator.Requests[floor][buttonType] = request.PendingRequest
-					}
+				} else if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+					elevator.Requests[floor][buttonType] = request.PendingRequest
 				}
 
 			case es.Moving:
@@ -68,9 +68,11 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 
 			case es.Idle:
 				if elevator.Floor == floor {
+					// See comment above
 					if ((buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
 						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up)) &&
 						request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+
 						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 					openDoor(elevator)
@@ -85,66 +87,46 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 
 		case newFloor := <-floorArrivalEventCh:
 			elevator.Floor = newFloor
-
 			elevio.SetFloorIndicator(newFloor)
-			switch elevator.State {
 
-			case es.Moving:
-				if shouldStop(elevator) {
-					elevio.SetMotorDirection(elevio.MD_Stop)
-					elevator.MotorStopTimer.Stop()
+			if elevator.State == es.Moving || elevator.State == es.MotorStop {
 
-					clearRequestAtFloor(elevator)
-
-					openDoor(elevator)
-					es.SetButtonLights(elevator)
-
-					elevator.State = es.DoorOpen
-				} else {
-					elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
-				}
-
-			case es.MotorStop:
-				elevator.MotorStopTimer.Stop()
-
-				if shouldStop(elevator) {
-					elevio.SetMotorDirection(elevio.MD_Stop)
-					clearRequestAtFloor(elevator)
-					elevator.MotorStopTimer.Stop()
-
-					openDoor(elevator)
-					es.SetButtonLights(elevator)
-
-					elevator.State = es.DoorOpen
-				} else {
+				if elevator.State == es.MotorStop {
 					elevator.State = es.Moving
+				}
+				if shouldStop(elevator) {
+					elevio.SetMotorDirection(elevio.MD_Stop)
+					elevator.MotorStopTimer.Stop()
+
+					clearRequestAtFloor(elevator)
+					es.SetButtonLights(elevator)
+
+					openDoor(elevator)
+					elevator.State = es.DoorOpen
+				} else {
 					elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 				}
-
 			}
 
 		case obstruction := <-obstructionEventCh:
 			elevator.Obstruction = obstruction
 
-			if elevator.State == es.DoorOpen {
-				elevio.SetDoorOpenLamp(true)
-			}
 			if !elevator.DoorTimer.HasTimeRemaining() && !elevator.Obstruction {
 				onDoorTimeout(elevator)
 			}
 
 		case <-elevator.DoorTimer.Timer.C:
-			// log("DoorTimer")
 			if !elevator.Obstruction {
 				onDoorTimeout(elevator)
 			}
 
 		case <-elevator.MotorStopTimer.Timer.C:
-			log("Triggered motor stop timer " + strconv.Itoa(int(elevator.State)))
+			log("Triggered motor stop timer ")
 			switch elevator.State {
 			case es.Moving:
 				elevator.State = es.MotorStop
-				if !existsRequestsBelow(elevator) && !existsRequestsAbove(elevator) {
+				// Adds a pending request if there is no other pending request to ensure it arrives at a valid floor
+				if !existsRequests(elevator) {
 					var otherStates, _ = network.GetRequestStatesAtIndex(elevator.Floor+int(elevator.Direction), elevio.BT_Cab)
 					if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab], otherStates) {
 						elevator.Requests[elevator.Floor+int(elevator.Direction)][elevio.BT_Cab] = request.PendingRequest
@@ -158,11 +140,10 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
 		case updatedRequests := <-requestsUpdatedCh:
-			// log("Updated Requests")
 			elevator.Requests = updatedRequests
 			es.SetButtonLights(elevator)
 
-			// Must be here to be able to confirm a new request before moving the elevator (When in idle mode), because it wil choose direction stop if not
+			// Start servicing newly confirmed requests (When in idle mode).
 			if elevator.State == es.Idle {
 				if existsRequestsOnFloor(elevator) {
 					clearRequestAtFloor(elevator)

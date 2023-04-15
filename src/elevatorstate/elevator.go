@@ -60,13 +60,13 @@ func InitializeElevator() Elevator {
 	elevator.State = Idle
 	elevator.Obstruction = false
 
-	//Timers
+	// Timers
 	elevator.DoorTimer = *createNewCheckableTimer(config.DOOR_OPEN_DURATION)
 	elevator.DoorTimer.Stop()
 	elevator.MotorStopTimer = *createNewCheckableTimer(config.MOTOR_STOP_DETECTION_TIME)
 	elevator.MotorStopTimer.Stop()
 
-	//Make sure elevator is not between floors
+	// Make sure elevator is not between floors
 	elevator.Direction = elevio.MD_Down
 	elevio.SetMotorDirection(elevio.MD_Down)
 	elevator.State = Moving

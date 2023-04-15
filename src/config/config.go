@@ -6,7 +6,7 @@ import (
 )
 
 // Determines how often system values are refreshed and or updated.
-const UPDATE_DELAY = 250 * time.Millisecond
+const UPDATE_DELAY = 100 * time.Millisecond
 
 // A time duration such that there is a high chance of a succesful update having been performed.
 const SIGNIFICANT_DELAY = 4 * UPDATE_DELAY

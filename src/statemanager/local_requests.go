@@ -42,6 +42,10 @@ func existsRequestsBelow(elev *elevatorstate.Elevator) bool {
 	return false
 }
 
+func existsRequests(elev *elevatorstate.Elevator) bool {
+	return (existsRequestsAbove(elev) || existsRequestsBelow(elev) || existsRequestsOnFloor(elev))
+}
+
 func chooseDirection(elev *elevatorstate.Elevator) elevio.MotorDirection {
 	switch elev.Direction {
 
@@ -92,7 +96,7 @@ func shouldStop(elev *elevatorstate.Elevator) bool {
 }
 
 // Worth noting that this function takes into account the requests of other nodes,
-// in order to properly trigger cascading deletion for all nodes.
+// in order to properly trigger deletion for all elevators.
 func clearRequestAtFloor(elev *elevatorstate.Elevator) {
 	var servicedHallRequest elevio.ButtonType
 
