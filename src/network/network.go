@@ -199,6 +199,7 @@ func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 // Note that cab orders are ensured to be stored by other nodes before locally being set to active.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) ([]request.RequestState, bool) {
 	var indexStates []request.RequestState
+	// Important to avoid 
 	var anyNotSynchronized = false
 	for _, node := range getOtherConnectedNodes() {
 		stateAsAny, ok := _globalElevatorStates.Load(node)

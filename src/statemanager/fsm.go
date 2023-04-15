@@ -3,10 +3,10 @@ package statemanager
 
 import (
 	"Elevator/config"
+	es "Elevator/elevatorstate" // Acronym alias used to shorten repeated code
 	"Elevator/elevio"
 	"Elevator/network"
 	"Elevator/request"
-	es "Elevator/elevatorstate" // Acronym alias used to shorten repeated code
 	"fmt"
 	"strconv"
 )
@@ -41,12 +41,10 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 			switch elevator.State {
 			case es.DoorOpen:
 				if elevator.Floor == floor {
-					if (buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
-						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
-
-						if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
-							elevator.Requests[floor][buttonType] = request.PendingRequest
-						}
+					if ((buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
+						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up)) &&
+						request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 					doorOpenTimer(elevator)
 				} else {
@@ -67,12 +65,10 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 
 			case es.Idle:
 				if elevator.Floor == floor {
-					if (buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
-						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up) {
-
-						if request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
-							elevator.Requests[floor][buttonType] = request.PendingRequest
-						}
+					if ((buttonType == elevio.BT_HallUp && elevator.Direction == elevio.MD_Down) ||
+						(buttonType == elevio.BT_HallDown && elevator.Direction == elevio.MD_Up)) &&
+						request.OrderStatesEqualTo(request.NoRequest, elevator.Requests[floor][buttonType], otherStates) {
+						elevator.Requests[floor][buttonType] = request.PendingRequest
 					}
 					elevio.SetDoorOpenLamp(true)
 					doorOpenTimer(elevator)
