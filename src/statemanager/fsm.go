@@ -166,6 +166,7 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 			// Must be here to be able to confirm a new request before moving the elevator (When in idle mode), because it wil choose direction stop if not
 			if elevator.State == es.Idle {
 				if existsRequestsOnFloor(elevator) {
+					clearRequestAtFloor(elevator)
 					openDoor(elevator)
 					elevator.State = es.DoorOpen
 				} else if existsRequestsBelow(elevator) || existsRequestsAbove(elevator) {
@@ -191,10 +192,6 @@ func onDoorTimeout(elevator *es.Elevator) {
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
-				} else {
-					log("Could not delete order condition 1, other states:")
-					fmt.Printf("%#v", otherStates)
-					fmt.Println()
 				}
 				openDoor(elevator)
 				es.SetButtonLights(elevator)
@@ -204,10 +201,6 @@ func onDoorTimeout(elevator *es.Elevator) {
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
-				} else {
-					log("Could not delete order condition 2, other states:")
-					fmt.Printf("%#v", otherStates)
-					fmt.Println()
 				}
 			}
 		} else if request.IsActive(elevator.Requests[elevator.Floor][elevio.BT_HallUp]) {
@@ -215,10 +208,6 @@ func onDoorTimeout(elevator *es.Elevator) {
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
-				} else {
-					log("Could not delete order condition 3, other states:")
-					fmt.Printf("%#v", otherStates)
-					fmt.Println()
 				}
 				openDoor(elevator)
 				es.SetButtonLights(elevator)
@@ -228,10 +217,6 @@ func onDoorTimeout(elevator *es.Elevator) {
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
-				} else {
-					log("Could not delete order condition 4, other states:")
-					fmt.Printf("%#v", otherStates)
-					fmt.Println()
 				}
 			}
 		}
