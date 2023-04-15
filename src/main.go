@@ -23,6 +23,7 @@ func main() {
 	network.LocalID = network.GetID()
 	elevio.Init()
 	elevator := elevatorstate.InitializeElevator()
+
 	buttonDriverCh := make(chan elevio.ButtonEvent)
 	floorDriverCh := make(chan int)
 	obstructionDriverCh := make(chan bool)
