@@ -1,9 +1,16 @@
+// This file contains the methods for managing the cyclic counter
+// representing the state of a particular request
 package request
 
 import (
 	"Elevator/config"
 	"Elevator/elevio"
+	"fmt"
 )
+
+func log(text string) {
+	fmt.Println("Cyclic counter: " + text)
+}
 
 func checkEqualityForArray(myState RequestState, otherState []RequestState) bool {
 	for _, RequestState := range otherState {
@@ -32,10 +39,11 @@ func OrderStatesEqualTo(checkState RequestState, myState RequestState, otherStat
 	return false
 }
 
+// Describes sequential iteration of request states to keep orders synchronized and allow them to be fulfilled.
 func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, floor int, button_type elevio.ButtonType, otherState []RequestState) RequestState {
 
 	myState := requests[floor][button_type]
-	
+
 	switch myState {
 	case NoRequest:
 		if otherCountersAhead(PendingRequest, otherState) {
@@ -45,11 +53,9 @@ func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, flo
 	case PendingRequest:
 		if checkEqualityForArray(myState, otherState) {
 			return ActiveRequest
-			// TODO: Turn on button light somewhere
 
 		} else if otherCountersAhead(ActiveRequest, otherState) {
 			return ActiveRequest
-			// TODO: Turn on button light somewhere
 		}
 
 	case ActiveRequest:
@@ -60,11 +66,9 @@ func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, flo
 	case DeleteRequest:
 		if checkEqualityForArray(myState, otherState) {
 			return NoRequest
-			// TODO: Turn off button light somewhere
 
 		} else if otherCountersAhead(NoRequest, otherState) {
 			return NoRequest
-			// TODO: Turn off button light somewhere
 		}
 
 	}

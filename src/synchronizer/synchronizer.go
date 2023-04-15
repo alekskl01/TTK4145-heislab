@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// Continously iterates through indivdual request counters based on all network request states.
+// Note that counter incrementation is paused when a node is in the process of resynchronization.
 func LocalRequestSynchronization(elev *elevatorstate.Elevator, requestsUpdate chan<- [config.N_FLOORS][config.N_BUTTONS]request.RequestState) {
 	for {
 		for floor := 0; floor < config.N_FLOORS; floor++ {
