@@ -139,11 +139,12 @@ func RunStateMachine(elevator *es.Elevator, buttonPressEventCh <-chan elevio.But
 				elevio.SetMotorDirection(elevator.Direction)
 				elevator.MotorStopTimer.Reset(config.MOTOR_STOP_DETECTION_TIME)
 			}
+
 		case updatedRequests := <-requestsUpdatedCh:
 			elevator.Requests = updatedRequests
 			es.SetButtonLights(elevator)
 
-			// Start servicing newly confirmed requests (When in idle mode).
+			// Start servicing newly confirmed requests (When in idle state).
 			if elevator.State == es.Idle {
 				if existsRequestsOnFloor(elevator) {
 					clearRequestAtFloor(elevator)
@@ -164,19 +165,21 @@ func onDoorTimeout(elevator *es.Elevator) {
 	floor := elevator.Floor
 
 	// Checks if elevator has a reason to travel in direction decided when floor
-	// was reached if uncerviced hall orders exist on the current floor, and services the hall order if not.
+	// was reached if unserviced hall orders exist on the current floor, and services the hall order if not.
 
 	if elevator.State == es.DoorOpen && !elevator.Obstruction {
 		if request.IsActive(elevator.Requests[floor][elevio.BT_HallDown]) {
 			if !existsRequestsAbove(elevator) {
+
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallDown] = request.DeleteRequest
 				}
-				openDoor(elevator)
 				es.SetButtonLights(elevator)
+				openDoor(elevator)
 				elevator.State = es.DoorOpen
 				return
+
 			} else {
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
@@ -185,14 +188,16 @@ func onDoorTimeout(elevator *es.Elevator) {
 			}
 		} else if request.IsActive(elevator.Requests[elevator.Floor][elevio.BT_HallUp]) {
 			if !existsRequestsBelow(elevator) {
+
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallUp)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallUp], otherStates) {
 					elevator.Requests[floor][elevio.BT_HallUp] = request.DeleteRequest
 				}
-				openDoor(elevator)
 				es.SetButtonLights(elevator)
+				openDoor(elevator)
 				elevator.State = es.DoorOpen
 				return
+
 			} else {
 				var otherStates, _ = network.GetRequestStatesAtIndex(floor, elevio.BT_HallDown)
 				if request.OrderStatesEqualTo(request.ActiveRequest, elevator.Requests[floor][elevio.BT_HallDown], otherStates) {
