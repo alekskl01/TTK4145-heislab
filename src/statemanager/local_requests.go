@@ -4,26 +4,25 @@ package statemanager
 
 import (
 	"Elevator/config"
+	"Elevator/elevatorstate"
 	"Elevator/elevio"
 	"Elevator/network"
 	"Elevator/request"
-	"Elevator/elevatorstate"
 )
 
 func existsRequestsOnFloor(elev *elevatorstate.Elevator) bool {
 	for button := 0; button < config.N_BUTTONS; button++ {
-		if request.IsActive(elev.Requests[elev.Floor][button]) && CheapestRequests[elev.Floor][button] {
+		if request.IsActive(elev.Requests[elev.Floor][button]) && SelfAssignedRequests[elev.Floor][button] {
 			return true
 		}
 	}
 	return false
 }
 
-
 func existsRequestsAbove(elev *elevatorstate.Elevator) bool {
 	for floor := elev.Floor + 1; floor < config.N_FLOORS; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			if request.IsActive(elev.Requests[floor][button]) && CheapestRequests[floor][button] {
+			if request.IsActive(elev.Requests[floor][button]) && SelfAssignedRequests[floor][button] {
 				return true
 			}
 		}
@@ -34,7 +33,7 @@ func existsRequestsAbove(elev *elevatorstate.Elevator) bool {
 func existsRequestsBelow(elev *elevatorstate.Elevator) bool {
 	for floor := 0; floor < elev.Floor; floor++ {
 		for button := 0; button < config.N_BUTTONS; button++ {
-			if request.IsActive(elev.Requests[floor][button]) && CheapestRequests[floor][button] {
+			if request.IsActive(elev.Requests[floor][button]) && SelfAssignedRequests[floor][button] {
 				return true
 			}
 		}
