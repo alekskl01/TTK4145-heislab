@@ -25,7 +25,7 @@ var ConnectedNodes []string
 
 // Last time this node recieved a state sync message from another node
 // and was not in the process of resynchronizing with the network (see isSynchronized).
-var _lastRequestUpdateTime time.Time
+var _lastRequestUpdateTime = time.Time{}
 
 // Used to intermittently disable use of local state info for actions during resynchronization with network.
 var _isSynchronized = true
@@ -270,7 +270,6 @@ func PeerUpdateReciever(peerTxEnableCh <-chan bool, requestsUpdateCh chan<- [con
 }
 
 func SyncReciever() {
-	_lastRequestUpdateTime = time.Now()
 	syncRxCh := make(chan SyncMessage)
 	go bcast.Receiver(config.BROADCAST_PORT, syncRxCh)
 	for {
