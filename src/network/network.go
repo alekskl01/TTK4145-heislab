@@ -199,7 +199,7 @@ func GetNewestRequestsFromNetwork() ([config.N_FLOORS][config.N_BUTTONS]request.
 // Note that cab orders are ensured to be stored by other nodes before locally being set to active.
 func GetRequestStatesAtIndex(floor int, button elevio.ButtonType) ([]request.RequestState, bool) {
 	var indexStates []request.RequestState
-	// Important to avoid 
+	// Important to avoid
 	var anyNotSynchronized = false
 	for _, node := range getOtherConnectedNodes() {
 		stateAsAny, ok := _globalElevatorStates.Load(node)
@@ -228,8 +228,10 @@ func DelayedResynchronization(requestsUpdateCh chan<- [config.N_FLOORS][config.N
 	// Ensure we have enough time to get updated states from network
 	time.Sleep(config.SIGNIFICANT_DELAY)
 	if !_isSynchronized {
+		log("Attempting resynchronization")
 		hallOrders, useLocalState := GetNewestRequestsFromNetwork()
 		if !useLocalState {
+			log("Synching to external state")
 			var newRequests = *requests
 			for floor := 0; floor < config.N_FLOORS; floor++ {
 				for button := 0; button < (config.N_BUTTONS - 1); button++ {
@@ -237,6 +239,8 @@ func DelayedResynchronization(requestsUpdateCh chan<- [config.N_FLOORS][config.N
 				}
 			}
 			requestsUpdateCh <- newRequests
+		} else {
+			log("Synching to own state")
 		}
 		// We have resynchronized with the network, enable regular state synchronization.
 		log("Reconnected and resynchronized, useLocalState?  " + strconv.FormatBool(useLocalState))
@@ -260,6 +264,7 @@ func PeerUpdateReciever(peerTxEnableCh <-chan bool, requestsUpdateCh chan<- [con
 				log("Disconnected from network")
 			}
 			if p.New != "" && p.New != LocalID {
+				log("New peer detected, resynchronizing.")
 				go DelayedResynchronization(requestsUpdateCh, requests)
 			}
 		}
