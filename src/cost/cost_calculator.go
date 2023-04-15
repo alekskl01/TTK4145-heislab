@@ -15,16 +15,17 @@ func log(text string) {
 	fmt.Println("Cost calculator: " + text)
 }
 
-func getCostBetweenFloors(current_floor int, floor int) (int, elevio.MotorDirection) {
-	var difference = current_floor - floor
+// Gives the direction and distance needed to get from one floor to another.
+func getNeededFloorTraversal(current_floor int, target_floor int) (int, elevio.MotorDirection) {
+	var difference = current_floor - target_floor
 	// Unless obstructed we define 0 cost to move to current floor.
 	if difference == 0 {
 		return 0, elevio.MD_Stop
 	}
-	var direction = elevio.MD_Up
+	direction := elevio.MotorDirection(elevio.MD_Down)
 	if difference < 0 {
 		difference = difference * -1
-		direction = elevio.MD_Down
+		direction = elevio.MD_Up
 	}
 	return difference, direction
 }
@@ -49,24 +50,25 @@ func GetCostOfHallOrder(hallFloor int, button_type elevio.ButtonType, floor int,
 		cost = cost + config.MAJOR_COST
 	}
 
-	switch fsm_state {
-	case elevatorstate.DoorOpen:
-		// Smallest possible increment
-		cost = cost + 1
-		break
-	case elevatorstate.MotorStop:
-		// Stopped motor can't fulfill orders.
+	// Stopped motor can't fulfill orders.
+	if fsm_state == elevatorstate.MotorStop {
 		return config.HIGH_COST
 	}
-	hallDistance, hallDir := getCostBetweenFloors(floor, hallFloor)
+
+	hallDistance, hallDir := getNeededFloorTraversal(floor, hallFloor)
 	// Unless obstructed we define 0 cost to move to current floor.
 	if hallDistance == 0 {
 		return cost
 	}
 
+	if fsm_state == elevatorstate.DoorOpen {
+		// Smallest possible increment to give minor benefit to closed door elevators
+		cost = cost + 1
+	}
+
 	cost = cost + hallDistance
 	for requestFloor := 0; requestFloor < config.N_FLOORS; requestFloor++ {
-		floorDistance, floor_dir := getCostBetweenFloors(floor, requestFloor)
+		floorDistance, floor_dir := getNeededFloorTraversal(floor, requestFloor)
 		// Any active request in the direction we need to go means less cost while
 		// requests in the opposite direction mean additional cost.
 		// This does not take into account the difference between a HallUp and HallDown request
@@ -80,13 +82,15 @@ func GetCostOfHallOrder(hallFloor int, button_type elevio.ButtonType, floor int,
 			}
 		}
 	}
-
-	// Add or subtract 2 since that is the number of floor changes needed to
-	// be at the same floor with the opposite direction.
-	if direction == hallDir {
-		cost = cost - 2
-	} else {
-		cost = cost + 2
+	
+	// Add or subtract 2 since that is the number of floor changes needed to change directions
+	// Easier to move in direction we are already moving in.
+	if direction != elevio.MD_Stop {
+		if direction == hallDir {
+			cost = cost - 2
+		} else {
+			cost = cost + 2
+		}
 	}
 
 	return cost
