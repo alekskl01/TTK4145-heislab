@@ -6,7 +6,6 @@ import (
 	"Elevator/config"
 	"Elevator/elevio"
 	"fmt"
-	"strconv"
 )
 
 func log(text string) {
@@ -73,6 +72,5 @@ func CyclicCounter(requests [config.N_FLOORS][config.N_BUTTONS]RequestState, flo
 		}
 
 	}
-	log("Invalid request state: " + strconv.Itoa(int(myState)))
 	return myState
 }

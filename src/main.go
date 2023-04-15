@@ -32,27 +32,17 @@ func main() {
 	peerTxEnable := make(chan bool)
 
 	// Initialize with requests from network (if any)
-	// go network.NetworkCheck(&elevator.Requests)
+	go network.NetworkCheck(&elevator.Requests)
 	go network.PeerUpdateReciever(peerTxEnable, requestsUpdate, &elevator.Requests)
 	go network.SyncReciever()
 	// Ensure we have more than enough time to get requests from network
 	time.Sleep(config.SIGNIFICANT_DELAY)
-	var cabOrders = network.GetLocalCabOrdersFromNetwork()
-	// Keep in mind this also includes cab orders from another elevator,
-	// to simplify data restructuring.
-	hallOrders, useLocalState := network.GetNewestRequestsFromNetwork()
-	if !useLocalState {
-		for floor := 0; floor < config.N_FLOORS; floor++ {
-			for button := 0; button < config.N_BUTTONS; button++ {
-				if button == elevio.BT_Cab {
-					elevator.Requests[floor][elevio.BT_Cab] = cabOrders[floor]
-				} else {
-					elevator.Requests[floor][button] = hallOrders[floor][button]
-				}
-			}
-		}
-	}
 
+	// Get any cab order we had previously from the network
+	var cabOrders = network.GetLocalCabOrdersFromNetwork()
+	for floor := 0; floor < config.N_FLOORS; floor++ {
+		elevator.Requests[floor][elevio.BT_Cab] = cabOrders[floor]
+	}
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
