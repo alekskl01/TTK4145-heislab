@@ -1,7 +1,7 @@
 Our Solution
 ================
 
-We decided to go with a pure Peer-to-peer system. We use our syncronizer aswell as a request cyclic counter to maintain the same list of hall orders across all elevators. Each elevator then use the cost calculator, together with the information it has about the other elevators connected to the network, to calculate which orders it should be servicing, and then self assigning these orders.
+We decided to go with a pure Peer-to-peer system. We use our syncronizer aswell as individual cyclic counters to maintain the same list of hall orders across all elevators. Each elevator then use the cost calculator, together with the information it has about the other elevators connected to the network, to calculate which orders it should be servicing, and then self assigning these orders.
 
 Each elevator also maintains a cab order backup for all other elevators, which are maintained in a similar way to the hall orders when the elevator in question is connected to the network, and is used by the elevator to reinitialize its cab orders after a system reboot. Reinitializing hall orders is more of a challenge, as they can be modified by all elevators. To ensure proper resyncronization of the hall orders, we do not allow an elevator to take new hall orders if it is not connected to the network. This keeps the hall order lists from branching-out from each other, reducing the resyncronization problem to simply picking the order list that was last connected to the network.
 
